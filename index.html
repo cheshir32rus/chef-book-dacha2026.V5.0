@@ -606,7 +606,36 @@
             border-left: 4px solid #c47a8a;
         }
         /* Полуфабрикаты уже имеют pf-accent зелёную полоску */
+
+        /* === РАЗДЕЛИТЕЛИ КАТЕГОРИЙ ПОСТАВЩИКОВ === */
+        .supplier-divider {
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            color: var(--accent-primary);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid var(--border);
+            border-top: 1px solid var(--border);
+            margin-top: 8px;
+        }
+
+        .supplier-card {
+            margin-bottom: 8px;
+        }
+
+        .supplier-card[data-category="хлеб"] { border-left: 4px solid #c4943a !important; }
+        .supplier-card[data-category="молочка"] { border-left: 4px solid #4a7a9a !important; }
+        .supplier-card[data-category="уголь"] { border-left: 4px solid #a05040 !important; }
+        .supplier-card[data-category="лаваш"] { border-left: 4px solid #8a6a9a !important; }
+        .supplier-card[data-category="мясо"] { border-left: 4px solid #c47a8a !important; }
+        .supplier-card[data-category="фри"] { border-left: 4px solid #d4a43a !important; }
+        .supplier-card[data-category="овощи"] { border-left: 4px solid #5a9a5a !important; }
+        .supplier-card[data-category="курица"] { border-left: 4px solid #b85c38 !important; }
+        .supplier-card[data-category="рыба"] { border-left: 4px solid #4a7a9a !important; }
 </style>
+<base target="_blank">
 </head>
 <body>
     <header class="header">
@@ -4224,6 +4253,10 @@
             <span class="nav-icon">📋</span>
             <span>Все ТК</span>
         </button>
+        <button class="nav-btn" onclick="openSuppliers()">
+            <span class="nav-icon">🚚</span>
+            <span>Поставщики</span>
+        </button>
     </nav>
 
     <script>
@@ -4325,5 +4358,554 @@
             });
         });
     </script>
+
+    
+<script>
+        // === ПОСТАВЩИКИ ===
+        const SUPPLIER_PASSWORD = 'sup-dacha-2026';
+        let expandedSupplier = null;
+
+        function openSuppliers() {
+            document.getElementById('passwordScreen').style.display = 'flex';
+            document.getElementById('suppliersScreen').style.display = 'none';
+            document.getElementById('supplierPassword').value = '';
+            document.getElementById('passwordError').style.display = 'none';
+            setTimeout(function() {
+                document.getElementById('supplierPassword').focus();
+            }, 100);
+        }
+
+        function closePasswordScreen() {
+            document.getElementById('passwordScreen').style.display = 'none';
+        }
+
+        function checkPassword() {
+            var inp = document.getElementById('supplierPassword');
+            var ps = document.getElementById('passwordScreen');
+            var ss = document.getElementById('suppliersScreen');
+            var err = document.getElementById('passwordError');
+
+            if (!inp || !ps || !ss) {
+                alert('Ошибка загрузки');
+                return;
+            }
+
+            var val = inp.value.trim();
+            if (val === SUPPLIER_PASSWORD) {
+                ps.style.display = 'none';
+                ss.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+                inp.value = '';
+                if (err) err.style.display = 'none';
+            } else {
+                if (err) err.style.display = 'block';
+                inp.value = '';
+                setTimeout(function() { inp.focus(); }, 100);
+            }
+        }
+
+        function closeSuppliers() {
+            document.getElementById('suppliersScreen').style.display = 'none';
+            document.getElementById('passwordScreen').style.display = 'none';
+            document.body.style.overflow = '';
+            if (expandedSupplier) {
+                expandedSupplier.classList.remove('expanded');
+                expandedSupplier = null;
+            }
+        }
+
+        function toggleSupplier(card) {
+            if (expandedSupplier === card) {
+                card.classList.remove('expanded');
+                expandedSupplier = null;
+                return;
+            }
+            if (expandedSupplier) {
+                expandedSupplier.classList.remove('expanded');
+            }
+            card.classList.add('expanded');
+            expandedSupplier = card;
+        }
+
+        function searchSuppliers() {
+            var term = document.getElementById('supplierSearch').value.toLowerCase().trim();
+            var cards = document.querySelectorAll('.supplier-card');
+            for (var i = 0; i < cards.length; i++) {
+                var text = cards[i].textContent.toLowerCase();
+                cards[i].style.display = text.indexOf(term) !== -1 ? 'block' : 'none';
+            }
+        }
+
+        function filterSuppliers(category) {
+            var buttons = document.querySelectorAll('#suppliersScreen .filter-btn');
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].classList.remove('active');
+                var btnText = buttons[i].textContent.toLowerCase();
+                var catMap = {
+                    'all': 'все', 'хлеб': 'хлеб', 'молочка': 'молочка',
+                    'уголь': 'уголь', 'овощи': 'овощи', 'мясо': 'мясо',
+                    'курица': 'курица', 'рыба': 'рыба', 'фри': 'фри', 'лаваш': 'лаваш'
+                };
+                if (btnText.indexOf(catMap[category] || category) !== -1) {
+                    buttons[i].classList.add('active');
+                }
+            }
+
+            var cards = document.querySelectorAll('.supplier-card');
+            for (var i = 0; i < cards.length; i++) {
+                if (category === 'all') {
+                    cards[i].style.display = 'block';
+                } else {
+                    cards[i].style.display = cards[i].getAttribute('data-category') === category ? 'block' : 'none';
+                }
+            }
+            document.getElementById('supplierSearch').value = '';
+        }
+
+        // Обработчик Enter для пароля
+        document.addEventListener('DOMContentLoaded', function() {
+            var passInput = document.getElementById('supplierPassword');
+            if (passInput) {
+                passInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.keyCode === 13) {
+                        e.preventDefault();
+                        checkPassword();
+                    }
+                });
+            }
+        });
+    </script>
+    <!-- === РАЗДЕЛ ПОСТАВЩИКИ === -->
+    <div id="suppliersScreen" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:var(--bg-primary); z-index:200; overflow-y:auto;">
+        <div class="header" style="position:sticky; top:0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <button onclick="closeSuppliers()" style="background:var(--accent-primary); border:none; border-radius:10px; padding:10px 14px; color:#fff; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;">← ТК</button>
+                <div style="text-align:center; flex:1;">
+                    <div class="logo" style="font-size:18px; margin-bottom:2px;">ПОСТАВЩИКИ</div>
+                    <div class="subtitle" style="font-size:10px;">Контакты и заявки</div>
+                </div>
+                <button onclick="closeSuppliers()" style="background:var(--bg-card); border:2px solid var(--border); border-radius:10px; padding:10px 14px; color:var(--text-primary); font-size:13px; cursor:pointer; white-space:nowrap;">✕</button>
+            </div>
+        </div>
+
+        <div style="padding:12px 16px; background:var(--bg-primary); border-bottom:1px solid var(--border);">
+            <button onclick="closeSuppliers()" style="width:100%; padding:12px; background:var(--bg-card); border:2px solid var(--border); border-radius:12px; color:var(--text-primary); font-size:14px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                <span>←</span> Вернуться к технологическим картам
+            </button>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-box" id="supplierSearch" placeholder="Поиск по названию, телефону или товару..." oninput="searchSuppliers()">
+            <div class="filters">
+                <button class="filter-btn active" onclick="filterSuppliers('all')">Все</button>
+                <button class="filter-btn" onclick="filterSuppliers('хлеб')">Хлеб</button>
+                <button class="filter-btn" onclick="filterSuppliers('молочка')">Молочка</button>
+                <button class="filter-btn" onclick="filterSuppliers('уголь')">Уголь/Газ</button>
+                <button class="filter-btn" onclick="filterSuppliers('овощи')">Овощи</button>
+                <button class="filter-btn" onclick="filterSuppliers('мясо')">Мясо/Десерты</button>
+                <button class="filter-btn" onclick="filterSuppliers('курица')">Курица</button>
+                <button class="filter-btn" onclick="filterSuppliers('рыба')">Рыба</button>
+                <button class="filter-btn" onclick="filterSuppliers('фри')">Фри/Заморозка</button>
+                <button class="filter-btn" onclick="filterSuppliers('лаваш')">Лаваш</button>
+            </div>
+        </div>
+
+        <div class="content" id="suppliersList">
+            <!-- Хлебокомбинат Бежецкий — Бородинский + Чиабатта -->
+            <div class="dish-card supplier-card" data-category="хлеб" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🍞</div>
+                    <div class="dish-info">
+                        <div class="dish-name">Хлебокомбинат Бежецкий <span style="background:#c4943a; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">ХЛЕБ</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>32-79-00</strong></span>
+                            <span class="meta-item">Код: <strong>6320</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Бородинский хлеб 0,5 кг</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Чиабатта</span><span class="ingredient-weight">по заявке</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        📅 Заявки: <strong>в любой день, кроме воскресенья</strong><br>
+                        🚚 Привоз: <strong>на следующий день</strong><br>
+                        📋 Код поставщика: <strong>6320</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Хлебокомбинат Бежецкий — Батон -->
+            <div class="dish-card supplier-card" data-category="хлеб" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🥖</div>
+                    <div class="dish-info">
+                        <div class="dish-name">Хлебокомбинат Бежецкий <span style="background:#c4943a; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">ХЛЕБ</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>32-77-00</strong></span>
+                            <span class="meta-item">Код: <strong>6320</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Батон в индивидуальной упаковке</span><span class="ingredient-weight">по заявке</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        📅 Заявки: <strong>в любой день, кроме воскресенья</strong><br>
+                        🚚 Привоз: <strong>на следующий день</strong><br>
+                        📋 Код поставщика: <strong>6320</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ИП Кузнецов — Уголь и газ -->
+            <div class="dish-card supplier-card" data-category="уголь" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🔥</div>
+                    <div class="dish-info">
+                        <div class="dish-name">ИП Кузнецов <span style="background:#a05040; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">УГОЛЬ/ГАЗ</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>8-903-819-36-44</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Уголь</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Газовые баллоны</span><span class="ingredient-weight">по заявке</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        📅 Заявки: <strong>в любой день</strong><br>
+                        🚚 Привоз: <strong>среда, пятница</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ИП Серенко — Молочка -->
+            <div class="dish-card supplier-card" data-category="молочка" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🥛</div>
+                    <div class="dish-info">
+                        <div class="dish-name">ИП Серенко <span style="background:#4a7a9a; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">МОЛОЧКА</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>8-920-602-64-74</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Молоко</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Сметана</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Сливки</span><span class="ingredient-weight">по заявке</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        📅 Заявки: <strong>в любой день до 15:00</strong><br>
+                        🚚 Привоз: <strong>на следующий день</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Лаваш — за наличку -->
+            <div class="dish-card supplier-card" data-category="лаваш" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🫓</div>
+                    <div class="dish-info">
+                        <div class="dish-name">Лаваш (наличка) <span style="background:#8a6a9a; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">ЛАВАШ</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>8-905-740-97-00</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Лаваш</span><span class="ingredient-weight">по заявке</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        💵 Оплата: <strong>наличные</strong><br>
+                        📅 Заявки: <strong>в любой день</strong><br>
+                        🚚 Привоз: <strong>в любой день</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Маррусс Сия -->
+            <div class="dish-card supplier-card" data-category="мясо" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🍰</div>
+                    <div class="dish-info">
+                        <div class="dish-name">Маррусс Сия <span style="background:#c47a8a; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">ДЕСЕРТЫ/МОРЕ</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>8-906-568-98-68</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Десерты</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Тунец филе</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Бекон</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Креветки</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Кальмары</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Соус на пиццу</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Пармезан тёртый</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Каре барашка</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Шея свиная (по акции)</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Говядина (очень редко)</span><span class="ingredient-weight">по заявке</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        📅 Заявки: <strong>в любой день, кроме вторника</strong><br>
+                        ⏰ Вторник: <strong>до 15:00</strong><br>
+                        ⏰ Четверг: <strong>до 15:00</strong><br>
+                        🚚 Привоз: <strong>среда, пятница</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Грифон -->
+            <div class="dish-card supplier-card" data-category="фри" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🍟</div>
+                    <div class="dish-info">
+                        <div class="dish-name">Грифон <span style="background:#d4a43a; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">ФРИ/ЗАМОРОЗКА</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>8-909-241-71-76</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Картофель фри</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Картофель батат</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Наггетсы</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Креветки в темпуре</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Масло фритюрное</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Соуса</span><span class="ingredient-weight">по заявке</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        📅 Заявки: <strong>в любой день</strong><br>
+                        🚚 Привоз: <strong>на следующий день, кроме воскресенья</strong><br>
+                        💡 Аналог Маррусс Сия
+                    </div>
+                </div>
+            </div>
+
+            <!-- ИП Керимов -->
+            <div class="dish-card supplier-card" data-category="овощи" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🥕</div>
+                    <div class="dish-info">
+                        <div class="dish-name">ИП Керимов <span style="background:#5a9a5a; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">ОВОЩИ</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>8-919-298-34-06</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Все овощи</span><span class="ingredient-weight">по заявке</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        📅 Заявки: <strong>в любой день</strong><br>
+                        🚚 Привоз: <strong>на следующий день, кроме воскресенья</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ИП Колесников -->
+            <div class="dish-card supplier-card" data-category="овощи" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🥬</div>
+                    <div class="dish-info">
+                        <div class="dish-name">ИП Колесников <span style="background:#5a9a5a; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">ОВОЩИ</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>8-919-193-70-06</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Все овощи</span><span class="ingredient-weight">по заявке</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        📅 Заявки: <strong>в любой день</strong><br>
+                        🚚 Привоз: <strong>на следующий день, кроме воскресенья</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ИП Тарасенко -->
+            <div class="dish-card supplier-card" data-category="курица" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🍗</div>
+                    <div class="dish-info">
+                        <div class="dish-name">ИП Тарасенко <span style="background:#b85c38; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">КУРИЦА/КОЛБАСКИ</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>8-910-299-59-88</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Куриное филе грудки</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Куриное филе бедра</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Печень куриная</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Сало</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Охотничьи колбаски</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Колбаски свиные</span><span class="ingredient-weight">по заявке</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        <strong>Охлаждёнка:</strong><br>
+                        📅 Заявки: <strong>с пятницы по понедельник до 10:00</strong><br>
+                        🚚 Привоз: <strong>вторник, четверг</strong><br><br>
+                        <strong>Заморозка:</strong><br>
+                        📅 Заявки: <strong>каждый день</strong><br>
+                        🚚 Привоз: <strong>на следующий день, кроме воскресенья</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ИП Михайловский -->
+            <div class="dish-card supplier-card" data-category="рыба" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🐟</div>
+                    <div class="dish-info">
+                        <div class="dish-name">ИП Михайловский <span style="background:#4a7a9a; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">МОРЕПРОДУКТЫ</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>8-900-375-55-41</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Судак филе</span><span class="ingredient-weight">постоянно</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Треска филе</span><span class="ingredient-weight">постоянно</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Форель филе</span><span class="ingredient-weight">постоянно</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Консервы рыбные (тунец, горбуша)</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Соуса</span><span class="ingredient-weight">уточнять при заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Другие морепродукты</span><span class="ingredient-weight">по необходимости</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        📅 Заявки: <strong>в любой день</strong><br>
+                        🚚 Привоз: <strong>на следующий день</strong><br>
+                        ⚡ <strong>Срочный привоз в этот же день возможен</strong> при ранней заявке и договорённости
+                    </div>
+                </div>
+            </div>
+
+            <!-- Осново Агро -->
+            <div class="dish-card supplier-card" data-category="молочка" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🥛</div>
+                    <div class="dish-info">
+                        <div class="dish-name">Осново Агро <span style="background:#4a7a9a; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">МОЛОЧКА</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>8-952-965-64-95</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Молоко 3,2% БМК</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Сливки 10% (БМК / Северная долина)</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Сливки 20% (БМК / Северная долина)</span><span class="ingredient-weight">по заявке</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        📅 Заявки: <strong>в любой день</strong><br>
+                        🚚 Привоз: <strong>на следующий день, кроме воскресенья</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Мираторг -->
+            <div class="dish-card supplier-card" data-category="мясо" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🥩</div>
+                    <div class="dish-info">
+                        <div class="dish-name">Мираторг <span style="background:#b85c38; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">МЯСО</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>8-995-913-13-44</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Говядина (заморозка / охлаждёнка)</span><span class="ingredient-weight">по заявке</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        📅 Заявки: <strong>в любой день</strong><br><br>
+                        <strong>Заморозка:</strong><br>
+                        🚚 Привоз: <strong>на следующий день, кроме воскресенья</strong><br><br>
+                        <strong>Охлаждёнка:</strong><br>
+                        🚚 Привоз: <strong>по графику</strong>, возможно через неделю
+                    </div>
+                </div>
+            </div>
+
+            <!-- Микро-Зелень -->
+            <div class="dish-card supplier-card" data-category="овощи" onclick="toggleSupplier(this)">
+                <div class="dish-header">
+                    <div class="dish-photo" style="font-size:24px;">🌱</div>
+                    <div class="dish-info">
+                        <div class="dish-name">Микро-Зелень <span style="background:#5a9a5a; color:#fff; padding:2px 8px; border-radius:4px; font-size:10px;">МИКРОЗЕЛЕНЬ</span></div>
+                        <div class="dish-meta">
+                            <span class="meta-item">📞 <strong>8-903-644-16-17</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dish-details">
+                    <div class="section-title">Ассортимент</div>
+                    <div class="ingredients-list">
+                        <div class="ingredient-row"><span class="ingredient-name">Микс салата</span><span class="ingredient-weight">по заявке</span></div>
+                        <div class="ingredient-row"><span class="ingredient-name">Микро-зелень горох</span><span class="ingredient-weight">по заявке</span></div>
+                    </div>
+                    <div class="section-title">Условия</div>
+                    <div class="tech-text">
+                        📅 Понедельник: <strong>до 13:00</strong><br>
+                        📅 Четверг: <strong>до 13:00</strong><br>
+                        🚚 Привоз: <strong>вторник, пятница</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- === ЭКРАН ВВОДА ПАРОЛЯ === -->
+    <div id="passwordScreen" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:var(--bg-primary); z-index:300; flex-direction:column; align-items:center; justify-content:center; padding:20px;">
+        <div style="font-size:48px; margin-bottom:20px;">🔐</div>
+        <div style="font-size:22px; font-weight:700; color:var(--text-primary); margin-bottom:8px;">Доступ к поставщикам</div>
+        <div style="font-size:14px; color:var(--text-secondary); margin-bottom:24px; text-align:center;">Этот раздел только для шефа и су-шефов</div>
+        <input type="password" id="supplierPassword" placeholder="Введите пароль..." style="width:100%; max-width:280px; padding:14px 18px; background:var(--bg-card); border:2px solid var(--border); border-radius:12px; color:var(--text-primary); font-size:16px; text-align:center; outline:none; margin-bottom:16px;">
+        <button onclick="checkPassword()" style="width:100%; max-width:280px; padding:14px; background:var(--accent-primary); color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:600; cursor:pointer;">Войти</button>
+        <div id="passwordError" style="color:var(--status-red); margin-top:12px; font-size:14px; display:none;">❌ Неверный пароль</div>
+        <button onclick="closePasswordScreen()" style="margin-top:20px; background:none; border:none; color:var(--text-muted); font-size:14px; cursor:pointer;">← Назад к ТК</button>
+    </div>
 </body>
 </html>
