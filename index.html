@@ -227,6 +227,7 @@
         @media (max-width: 768px) { ::-webkit-scrollbar { display: none; } }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Great+Vibes&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
+<base target="_blank">
 </head>
 <body>
 
@@ -308,6 +309,7 @@
                 <div style="text-align:right;">
                     <button class="theme-toggle" id="themeToggle" title="Сменить тему">🌙</button>
                     <div id="userRoleBadge" style="margin-top:8px;"></div>
+                    <div id="syncStatus" style="margin-top:4px;font-size:10px;color:var(--text-muted);">☁️ Оффлайн</div>
                 </div>
             </div>
         </header>
@@ -3843,11 +3845,20 @@
     async function updateDishInFirebase(id, data) {
         if (!db) return false;
         try {
-            await db.collection('dishes').doc(id).update(data);
+            // Используем set с merge:true — создаёт документ если нет, обновляет если есть
+            await db.collection('dishes').doc(id).set(data, { merge: true });
+            console.log('Firebase updated:', id);
             return true;
         } catch(e) {
             console.error('Firebase update error:', e);
-            return false;
+            // Fallback: пробуем обычный update
+            try {
+                await db.collection('dishes').doc(id).update(data);
+                return true;
+            } catch(e2) {
+                console.error('Firebase update fallback error:', e2);
+                return false;
+            }
         }
     }
 
@@ -3913,15 +3924,28 @@
     // === ИНИЦИАЛИЗАЦИЯ ===
     function init() {
         try {
-            const saved = SafeStorage.getItem('cb_dishes');
+            // Пробуем загрузить из кэша (новый ключ)
+            const saved = SafeStorage.getItem('cb_dishes_cache');
             if (saved) {
                 try { dishes = JSON.parse(saved); } catch(e) { 
                     dishes = JSON.parse(JSON.stringify(DISHES_BASE));
                     saveDishes();
                 }
             } else {
-                dishes = JSON.parse(JSON.stringify(DISHES_BASE));
-                saveDishes();
+                // Fallback на старый ключ
+                const oldSaved = SafeStorage.getItem('cb_dishes');
+                if (oldSaved) {
+                    try { 
+                        dishes = JSON.parse(oldSaved); 
+                        SafeStorage.setItem('cb_dishes_cache', oldSaved);
+                    } catch(e) { 
+                        dishes = JSON.parse(JSON.stringify(DISHES_BASE));
+                        saveDishes();
+                    }
+                } else {
+                    dishes = JSON.parse(JSON.stringify(DISHES_BASE));
+                    saveDishes();
+                }
             }
 
             const session = SafeStorage.getItem('cb_session');
@@ -4014,13 +4038,14 @@
     }
 
     function doLogout() {
+        stopRealtimeSync();
         SafeStorage.removeItem('cb_session');
         currentRole = null;
         currentUser = null;
         location.reload();
     }
 
-    function showMainApp() {
+    async function showMainApp() {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
 
@@ -4032,8 +4057,46 @@
             document.getElementById('addDishBtn').style.display = 'flex';
         }
 
+        // Сначала пробуем загрузить из Firebase
+        var loadedFromCloud = false;
+        if (db) {
+            try {
+                var snapshot = await db.collection('dishes').get();
+                var firebaseDishes = [];
+                snapshot.forEach(function(docSnap) {
+                    firebaseDishes.push(Object.assign({ id: docSnap.id }, docSnap.data()));
+                });
+                if (firebaseDishes.length > 0) {
+                    dishes = firebaseDishes;
+                    SafeStorage.setItem('cb_dishes_cache', JSON.stringify(dishes));
+                    loadedFromCloud = true;
+                    console.log('Loaded from Firebase:', firebaseDishes.length);
+                }
+            } catch(e) {
+                console.log('Firebase load failed, using cache:', e.message);
+            }
+        }
+
+        // Если не загрузили из облака — используем кэш
+        if (!loadedFromCloud) {
+            var cached = SafeStorage.getItem('cb_dishes_cache');
+            if (cached) {
+                try {
+                    dishes = JSON.parse(cached);
+                    console.log('Loaded from cache:', dishes.length);
+                } catch(e) {
+                    dishes = JSON.parse(JSON.stringify(DISHES_BASE));
+                }
+            } else {
+                dishes = JSON.parse(JSON.stringify(DISHES_BASE));
+            }
+        }
+
         renderDishes();
         renderSuppliers();
+
+        // Запускаем realtime sync для получения изменений от других
+        startRealtimeSync();
     }
 
     // === ФОТО ЗАГРУЗКА ===
@@ -4062,7 +4125,30 @@
     }
 
     // === РЕНДЕРИНГ ===
+    function updateSyncStatus() {
+        var statusEl = document.getElementById('syncStatus');
+        if (!statusEl) return;
+        if (!db) {
+            statusEl.textContent = '⚠️ Firebase не подключен';
+            statusEl.style.color = 'var(--status-red)';
+            return;
+        }
+        if (navigator.onLine) {
+            if (unsubscribeDishes) {
+                statusEl.textContent = '☁️ Онлайн — авто-синхр.';
+                statusEl.style.color = 'var(--status-green)';
+            } else {
+                statusEl.textContent = '☁️ Онлайн (синхр. остановлена)';
+                statusEl.style.color = 'var(--status-yellow)';
+            }
+        } else {
+            statusEl.textContent = '📴 Оффлайн (кэш)';
+            statusEl.style.color = 'var(--status-yellow)';
+        }
+    }
+
     function renderDishes() {
+        updateSyncStatus();
         const container = document.getElementById('dishesContainer');
         const role = ROLES[currentRole];
 
@@ -4244,17 +4330,57 @@
     // === CRUD ===
     async function syncAllToFirebase() {
         var btn = event.target;
+        var originalText = btn.textContent;
         btn.textContent = '⏳...';
         btn.disabled = true;
+
         try {
+            // ШАГ 1: Загружаем свежие данные из облака (pull)
+            console.log('Pulling from cloud...');
+            var snapshot = await db.collection('dishes').get();
+            var cloudDishes = [];
+            snapshot.forEach(function(docSnap) {
+                cloudDishes.push(Object.assign({ id: docSnap.id }, docSnap.data()));
+            });
+
+            // ШАГ 2: Мержим — локальные изменения имеют приоритет
+            var merged = {};
+
+            // Сначала добавляем все из облака
+            cloudDishes.forEach(function(d) {
+                merged[d.id] = d;
+            });
+
+            // Затем перезаписываем локальными (они новее)
+            dishes.forEach(function(d) {
+                if (d.updated_at) {
+                    var cloudVersion = merged[d.id];
+                    if (!cloudVersion || !cloudVersion.updated_at || d.updated_at >= cloudVersion.updated_at) {
+                        merged[d.id] = d;
+                    }
+                } else {
+                    merged[d.id] = d;
+                }
+            });
+
+            dishes = Object.values(merged);
+
+            // ШАГ 3: Пушим всё обратно в облако
+            console.log('Pushing to cloud...');
             for (var i = 0; i < dishes.length; i++) {
                 await saveDishToFirebase(dishes[i]);
             }
-            alert('Все блюда синхронизированы!');
+
+            // Сохраняем локально
+            SafeStorage.setItem('cb_dishes_cache', JSON.stringify(dishes));
+            renderDishes();
+
+            alert('Синхронизация завершена! Блюд: ' + dishes.length);
         } catch(e) {
-            alert('Ошибка: ' + e.message);
+            console.error('Sync error:', e);
+            alert('Ошибка синхронизации: ' + e.message);
         } finally {
-            btn.textContent = '☁️ Синхр.';
+            btn.textContent = originalText;
             btn.disabled = false;
         }
     }
@@ -4389,8 +4515,21 @@
         renderDishes();
     }
 
-    function deleteDish(id) {
+    async function deleteDish(id) {
         if (!confirm('Удалить это блюдо?')) return;
+
+        // Удаляем из Firebase
+        if (db) {
+            try {
+                await db.collection('dishes').doc(id).delete();
+                console.log('Firebase deleted:', id);
+            } catch(e) {
+                console.error('Firebase delete error:', e);
+                alert('Ошибка удаления из облака: ' + e.message);
+                return;
+            }
+        }
+
         dishes = dishes.filter(d => d.id !== id);
         saveDishes();
         renderDishes();
@@ -4493,6 +4632,20 @@
         if (e.key === 'Enter') doLogin();
     });
 
+    // === СЕТЕВОЙ СТАТУС ===
+    window.addEventListener('online', function() {
+        console.log('Сеть восстановлена');
+        updateSyncStatus();
+        // Перезапускаем realtime sync
+        if (currentRole && db && !unsubscribeDishes) {
+            startRealtimeSync();
+        }
+    });
+    window.addEventListener('offline', function() {
+        console.log('Сеть потеряна');
+        updateSyncStatus();
+    });
+
     // === ОТЛАДКА ===
     window.onerror = function(msg, url, line) {
         console.error('JS Ошибка:', msg, 'строка', line);
@@ -4500,6 +4653,35 @@
         if (splash) { splash.classList.add('hidden'); splash.style.display = 'none'; }
         return true;
     };
+
+    // === REALTIME SYNC ===
+    let unsubscribeDishes = null;
+
+    function startRealtimeSync() {
+        if (!db || unsubscribeDishes) return;
+        console.log('Starting realtime sync...');
+        unsubscribeDishes = db.collection('dishes').onSnapshot(function(snapshot) {
+            var updated = [];
+            snapshot.forEach(function(docSnap) {
+                updated.push(Object.assign({ id: docSnap.id }, docSnap.data()));
+            });
+            if (updated.length > 0) {
+                dishes = updated;
+                SafeStorage.setItem('cb_dishes_cache', JSON.stringify(dishes));
+                renderDishes();
+                console.log('Realtime update:', updated.length, 'dishes');
+            }
+        }, function(err) {
+            console.log('Realtime error (offline?):', err.message);
+        });
+    }
+
+    function stopRealtimeSync() {
+        if (unsubscribeDishes) {
+            unsubscribeDishes();
+            unsubscribeDishes = null;
+        }
+    }
 
     // === СТАРТ ===
     init();
