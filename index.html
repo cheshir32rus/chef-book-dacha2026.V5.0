@@ -108,8 +108,8 @@
         .dish-card[data-category="Детское"] { border-left: 4px solid #c47a8a; }
         .dish-card[data-category="Полуфабрикаты"] { border-left: 4px solid var(--pf-accent); }
 
-        .dish-header { display: flex; padding: 16px; gap: 16px; pointer-events: none; }
-        .dish-photo { width: 80px; height: 80px; background: linear-gradient(135deg, var(--bg-secondary) 0%, #e5ddd0 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 32px; flex-shrink: 0; border: 2px dashed var(--border-strong); pointer-events: none; overflow: hidden; }
+        .dish-header { display: flex; padding: 16px; gap: 16px; }
+        .dish-photo { width: 80px; height: 80px; background: linear-gradient(135deg, var(--bg-secondary) 0%, #e5ddd0 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 32px; flex-shrink: 0; border: 2px dashed var(--border-strong); overflow: hidden; cursor: zoom-in; }
         .dish-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
         .dish-card[data-category="Полуфабрикаты"] .dish-photo { background: linear-gradient(135deg, #e8f0e5 0%, #d8e8d5 100%); border: 2px dashed var(--pf-accent); }
         .dish-info { flex: 1; min-width: 0; pointer-events: none; }
@@ -4338,7 +4338,7 @@
         return `
         <div class="dish-card ${pfClass}" data-category="${d.category}" data-id="${d.id}" onclick="toggleCard(this)">
             <div class="dish-header">
-                <div class="dish-photo">${photoContent}</div>
+                <div class="dish-photo" onclick="event.stopPropagation(); openLightbox('${escapeHtml(d.photo || '')}', '${escapeHtml(d.emoji || '🍽️')}')">${photoContent}</div>
                 <div class="dish-info">
                     <div class="dish-name">${escapeHtml(d.name)} ${pfBadge} <span class="season-badge">${seasonIcon}</span> <span class="status-badge status-${d.status || 'green'}"></span></div>
                     <div class="dish-meta">
@@ -4772,8 +4772,47 @@
         }
     }
 
+
+    // === LIGHTBOX ===
+    function openLightbox(photoUrl, emoji) {
+        const lb = document.getElementById('lightbox');
+        const img = document.getElementById('lightboxImg');
+        const em = document.getElementById('lightboxEmoji');
+
+        if (photoUrl && photoUrl.length > 5) {
+            img.src = photoUrl;
+            img.style.display = 'block';
+            em.style.display = 'none';
+        } else {
+            img.style.display = 'none';
+            em.textContent = emoji || '🍽️';
+            em.style.display = 'block';
+        }
+
+        lb.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+        const lb = document.getElementById('lightbox');
+        lb.style.display = 'none';
+        document.body.style.overflow = '';
+        document.getElementById('lightboxImg').src = '';
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeLightbox();
+    });
+
     // === СТАРТ ===
     init();
     </script>
+
+    <!-- === LIGHTBOX === -->
+    <div id="lightbox" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:10000;align-items:center;justify-content:center;padding:20px;" onclick="closeLightbox()">
+        <img id="lightboxImg" src="" alt="" style="max-width:100%;max-height:85vh;object-fit:contain;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+        <div id="lightboxEmoji" style="font-size:140px;display:none;text-shadow:0 0 40px rgba(255,255,255,0.3);"></div>
+        <div style="position:absolute;top:16px;right:20px;color:#fff;font-size:32px;cursor:pointer;padding:10px;z-index:10001;">✕</div>
+    </div>
 </body>
 </html>
