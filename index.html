@@ -289,6 +289,13 @@
         :root.dark .bottom-nav { background: linear-gradient(to top, #0a0a0a, rgba(10,10,10,0.95)); border-top: 1px solid #2a2a2a; }
         :root.dark .nav-btn.active { color: var(--gold); }
         :root.dark .photo-hint a { color: var(--gold); }
+        :root.dark #supplierModal .modal { background: #141414; border: 1px solid #2a2a2a; }
+        :root.dark #supplierModal .form-input,
+        :root.dark #supplierModal .form-select,
+        :root.dark #supplierModal .form-textarea { background: #0a0a0a; border-color: #2a2a2a; }
+        :root.dark #supplierModal .form-input:focus,
+        :root.dark #supplierModal .form-select:focus,
+        :root.dark #supplierModal .form-textarea:focus { border-color: var(--gold); }
 
         ::-webkit-scrollbar { width: 6px; }
         :root.dark .theme-toggle { border-color: var(--gold); background: #1a1a1a; }
@@ -402,6 +409,7 @@
         @media (max-width: 768px) { ::-webkit-scrollbar { display: none; } }
     </style>
     
+<base target="_blank">
 <base target="_blank">
 </head>
 <body>
@@ -590,6 +598,63 @@
         </div>
     </div>
 
+    <!-- === МОДАЛЬНОЕ ОКНО: ПОСТАВЩИК === -->
+    <div id="supplierModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="supplierModalTitle">Новый поставщик</div>
+                <button class="modal-close" onclick="closeSupplierModal()">✕</button>
+            </div>
+            <form id="supplierForm" onsubmit="saveSupplier(event)">
+                <input type="hidden" id="editSupplierId">
+                <div class="form-group">
+                    <label class="form-label">Название</label>
+                    <input type="text" class="form-input" id="formSupName" required placeholder="Название поставщика">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Категория</label>
+                    <select class="form-select" id="formSupCategory" required>
+                        <option value="хлеб">Хлеб</option>
+                        <option value="молочка">Молочка</option>
+                        <option value="уголь">Уголь/Газ</option>
+                        <option value="лаваш">Лаваш</option>
+                        <option value="мясо">Мясо/Десерты</option>
+                        <option value="фри">Фри/Заморозка</option>
+                        <option value="овощи">Овощи</option>
+                        <option value="курица">Курица</option>
+                        <option value="рыба">Рыба</option>
+                        <option value="другое">Другое</option>
+                    </select>
+                </div>
+                <div style="display:flex;gap:12px;">
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Телефон</label>
+                        <input type="text" class="form-input" id="formSupPhone" required placeholder="8-900-000-00-00">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Код (если есть)</label>
+                        <input type="text" class="form-input" id="formSupCode" placeholder="0000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ассортимент</label>
+                    <div id="supplierItemsList">
+                        <div class="ingredient-form-row">
+                            <input type="text" class="form-input" placeholder="Товар" data-sup-item>
+                            <button type="button" class="btn-remove-ing" onclick="removeSupplierItemRow(this)">✕</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-add-ing" onclick="addSupplierItemRow()">+ Добавить товар</button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">График и условия</label>
+                    <textarea class="form-textarea" id="formSupSchedule" placeholder="Заявки: ... Привоз: ..."></textarea>
+                </div>
+                <button type="submit" class="btn-save">💾 Сохранить поставщика</button>
+            </form>
+        </div>
+    </div>
+
     <!-- === РАЗДЕЛ ПОСТАВЩИКИ === -->
     <div id="suppliersScreen">
         <div class="header" style="position:sticky;top:0;">
@@ -602,8 +667,9 @@
                 <button onclick="closeSuppliers()" style="background:var(--bg-card);border:2px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text-primary);font-size:13px;cursor:pointer;white-space:nowrap;">✕</button>
             </div>
         </div>
-        <div style="padding:12px 16px;background:var(--bg-primary);border-bottom:1px solid var(--border);">
+        <div style="padding:12px 16px;background:var(--bg-primary);border-bottom:1px solid var(--border);display:flex;gap:8px;flex-direction:column;">
             <button onclick="closeSuppliers()" style="width:100%;padding:12px;background:var(--bg-card);border:2px solid var(--border);border-radius:12px;color:var(--text-primary);font-size:14px;font-weight:600;cursor:pointer;">← Вернуться к технологическим картам</button>
+            <button id="addSupplierBtn" onclick="openAddSupplierModal()" style="display:none;width:100%;padding:12px;background:var(--accent-primary);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">➕ Добавить поставщика</button>
         </div>
         <div class="search-container">
             <input type="text" class="search-box" id="supplierSearch" placeholder="Поиск по названию, телефону или товару..." oninput="searchSuppliers()">
@@ -3950,7 +4016,7 @@
 ];
 
     // === ПОСТАВЩИКИ ===
-    const SUPPLIERS = [
+    const SUPPLIERS_BASE = [
         {name: "Хлебокомбинат Бежецкий", category: "хлеб", phone: "32-79-00", code: "6320", items: ["Бородинский хлеб", "Чиабатта"], schedule: "Заявки: кроме воскресенья. Привоз: на следующий день"},
         {name: "Хлебокомбинат Бежецкий (батон)", category: "хлеб", phone: "32-77-00", code: "6320", items: ["Батон в инд. упаковке"], schedule: "Заявки: кроме воскресенья. Привоз: на следующий день"},
         {name: "ИП Кузнецов", category: "уголь", phone: "8-903-819-36-44", items: ["Уголь", "Газовые баллоны"], schedule: "Привоз: среда, пятница"},
@@ -4059,6 +4125,7 @@
     let dishes = [];
     let favorites = JSON.parse(SafeStorage.getItem('cb_favorites') || '[]');
     let notes = JSON.parse(SafeStorage.getItem('cb_notes') || '{}');
+    let suppliers = [];
     let expandedCard = null;
     let currentFilter = 'all';
     let searchTerm = '';
@@ -4638,15 +4705,30 @@
         const role = ROLES[currentRole];
         const canEdit = role.canManageSuppliers;
 
-        container.innerHTML = SUPPLIERS.map(s => `
-        <div class="dish-card supplier-card" data-category="${s.category}" onclick="toggleCard(this)">
+        // Показываем/скрываем кнопку добавления
+        const addBtn = document.getElementById('addSupplierBtn');
+        if (addBtn) {
+            addBtn.style.display = canEdit ? 'block' : 'none';
+        }
+
+        container.innerHTML = suppliers.map((s, idx) => {
+            let actions = '';
+            if (canEdit) {
+                actions = `
+                <div class="card-actions" style="margin-top:12px;">
+                    <button class="action-btn btn-edit" onclick="event.stopPropagation();openEditSupplierModal(${idx})">✏️ Редактировать</button>
+                    <button class="action-btn btn-delete" onclick="event.stopPropagation();deleteSupplier(${idx})">🗑️ Удалить</button>
+                </div>`;
+            }
+            return `
+        <div class="dish-card supplier-card" data-category="${s.category}" data-supplier-idx="${idx}" onclick="toggleCard(this)">
             <div class="dish-header">
                 <div class="dish-photo" style="font-size:24px;">${getSupplierEmoji(s.category)}</div>
                 <div class="dish-info">
                     <div class="dish-name">${escapeHtml(s.name)} <span style="background:var(--accent-primary);color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;">${s.category.toUpperCase()}</span></div>
                     <div class="dish-meta">
                         <span class="meta-item">📞 <strong>${escapeHtml(s.phone)}</strong></span>
-                        ${s.code ? '<span class="meta-item">Код: <strong>' + s.code + '</strong></span>' : ''}
+                        ${s.code ? '<span class="meta-item">Код: <strong>' + escapeHtml(s.code) + '</strong></span>' : ''}
                     </div>
                 </div>
             </div>
@@ -4657,8 +4739,10 @@
                 </div>
                 <div class="section-title">Условия</div>
                 <div class="tech-text">${escapeHtml(s.schedule)}</div>
+                ${actions}
             </div>
-        </div>`).join('');
+        </div>`;
+        }).join('');
     }
 
     function getSupplierEmoji(cat) {
@@ -4666,7 +4750,109 @@
         return map[cat] || '📦';
     }
 
+
+    // === CRUD ПОСТАВЩИКОВ ===
+    function openAddSupplierModal() {
+        document.getElementById('supplierModalTitle').textContent = '➕ Новый поставщик';
+        document.getElementById('editSupplierId').value = '';
+        document.getElementById('formSupName').value = '';
+        document.getElementById('formSupCategory').value = 'овощи';
+        document.getElementById('formSupPhone').value = '';
+        document.getElementById('formSupCode').value = '';
+        document.getElementById('formSupSchedule').value = '';
+        document.getElementById('supplierItemsList').innerHTML = '<div class="ingredient-form-row"><input type="text" class="form-input" placeholder="Товар" data-sup-item><button type="button" class="btn-remove-ing" onclick="removeSupplierItemRow(this)">✕</button></div>';
+        document.getElementById('supplierModal').classList.add('active');
+    }
+
+    function openEditSupplierModal(idx) {
+        const s = suppliers[idx];
+        if (!s) return;
+        document.getElementById('supplierModalTitle').textContent = '✏️ Редактировать: ' + s.name;
+        document.getElementById('editSupplierId').value = idx;
+        document.getElementById('formSupName').value = s.name;
+        document.getElementById('formSupCategory').value = s.category;
+        document.getElementById('formSupPhone').value = s.phone;
+        document.getElementById('formSupCode').value = s.code || '';
+        document.getElementById('formSupSchedule').value = s.schedule || '';
+
+        const itemsHtml = s.items.map(item =>
+            '<div class="ingredient-form-row"><input type="text" class="form-input" value="' + escapeHtml(item) + '" data-sup-item><button type="button" class="btn-remove-ing" onclick="removeSupplierItemRow(this)">✕</button></div>'
+        ).join('');
+        document.getElementById('supplierItemsList').innerHTML = itemsHtml || '<div class="ingredient-form-row"><input type="text" class="form-input" placeholder="Товар" data-sup-item><button type="button" class="btn-remove-ing" onclick="removeSupplierItemRow(this)">✕</button></div>';
+
+        document.getElementById('supplierModal').classList.add('active');
+    }
+
+    function closeSupplierModal() {
+        document.getElementById('supplierModal').classList.remove('active');
+    }
+
+    function addSupplierItemRow() {
+        const div = document.createElement('div');
+        div.className = 'ingredient-form-row';
+        div.innerHTML = '<input type="text" class="form-input" placeholder="Товар" data-sup-item><button type="button" class="btn-remove-ing" onclick="removeSupplierItemRow(this)">✕</button>';
+        document.getElementById('supplierItemsList').appendChild(div);
+    }
+
+    function removeSupplierItemRow(btn) {
+        btn.parentElement.remove();
+    }
+
+    function saveSupplier(e) {
+        e.preventDefault();
+        const editIdx = document.getElementById('editSupplierId').value;
+        const name = document.getElementById('formSupName').value.trim();
+        const category = document.getElementById('formSupCategory').value;
+        const phone = document.getElementById('formSupPhone').value.trim();
+        const code = document.getElementById('formSupCode').value.trim();
+        const schedule = document.getElementById('formSupSchedule').value.trim();
+
+        const items = [];
+        document.querySelectorAll('#supplierItemsList .ingredient-form-row').forEach(row => {
+            const val = row.querySelector('[data-sup-item]').value.trim();
+            if (val) items.push(val);
+        });
+
+        const supplierData = { name, category, phone, code: code || null, items, schedule };
+
+        if (editIdx !== '') {
+            suppliers[parseInt(editIdx)] = supplierData;
+        } else {
+            suppliers.push(supplierData);
+        }
+
+        persistSuppliers();
+        closeSupplierModal();
+        renderSuppliers();
+    }
+
+    function deleteSupplier(idx) {
+        if (!confirm('Удалить поставщика "' + suppliers[idx].name + '"?')) return;
+        suppliers.splice(idx, 1);
+        persistSuppliers();
+        renderSuppliers();
+    }
+
+    function persistSuppliers() {
+        SafeStorage.setItem('cb_suppliers', JSON.stringify(suppliers));
+    }
+
+    function loadSuppliers() {
+        const saved = SafeStorage.getItem('cb_suppliers');
+        if (saved) {
+            try {
+                suppliers = JSON.parse(saved);
+            } catch(e) {
+                suppliers = JSON.parse(JSON.stringify(SUPPLIERS_BASE));
+            }
+        } else {
+            suppliers = JSON.parse(JSON.stringify(SUPPLIERS_BASE));
+        }
+    }
+
     function openSuppliers() {
+        loadSuppliers();
+        renderSuppliers();
         document.getElementById('suppliersScreen').style.display = 'block';
         document.body.style.overflow = 'hidden';
         // Устанавливаем бейдж доступа
@@ -4695,6 +4881,13 @@
             card.style.display = card.textContent.toLowerCase().includes(term) ? 'block' : 'none';
         });
     }
+
+    // === ESC для закрытия модалки поставщиков ===
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeSupplierModal();
+        }
+    });
 
     function filterSuppliers(cat) {
         document.querySelectorAll('#suppliersScreen .filter-btn').forEach(b => b.classList.remove('active'));
