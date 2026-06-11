@@ -4874,65 +4874,32 @@
     let currentAnnFilter = 'all';
     let selectedAnnouncement = null;
 
-    // Демо-данные (потом заменим на Firebase)
-    const ANNOUNCEMENTS_BASE = [
-        {
-            id: 'ann_001',
-            title: 'Собрание персонала',
-            text: 'Завтра 12 июня в 10:00 собрание всего персонала. Тема: презентация летнего меню и новых техник подачи. Присутствие обязательно.',
-            author: 'Дима',
-            authorRole: 'chef',
-            priority: 'high',
-            targetRoles: ['all'],
-            pinned: true,
-            createdAt: '2026-06-11T08:00:00Z',
-            readBy: {}
-        },
-        {
-            id: 'ann_002',
-            title: 'Новый поставщик мяса',
-            text: 'С понедельника работаем с "Мясной дворик". Цены на говядину снизились на 8%. Новые контакты в разделе Поставщики.',
-            author: 'Дима',
-            authorRole: 'chef',
-            priority: 'normal',
-            targetRoles: ['all'],
-            pinned: false,
-            createdAt: '2026-06-10T14:30:00Z',
-            readBy: { chef: '2026-06-10T15:00:00Z' }
-        },
-        {
-            id: 'ann_003',
-            title: 'Проверка чистоты зоны горячего цеха',
-            text: 'Сегодня в 16:00 проверка. Прошу всех поваров подготовить рабочие места. Особое внимание — вытяжке и жарочным поверхностям.',
-            author: 'Надя',
-            authorRole: 'sous',
-            priority: 'high',
-            targetRoles: ['cook'],
-            pinned: false,
-            createdAt: '2026-06-11T06:00:00Z',
-            readBy: {}
-        },
-        {
-            id: 'ann_004',
-            title: 'Изменение в ТК: соус к утке',
-            text: 'Убрали сахар (было 15г). Добавили 5г дижонской горчицы. Обновлённая ТК уже в системе.',
-            author: 'Дима',
-            authorRole: 'chef',
-            priority: 'normal',
-            targetRoles: ['cook', 'sous'],
-            pinned: false,
-            createdAt: '2026-06-09T16:00:00Z',
-            readBy: { chef: '2026-06-09T16:05:00Z' }
-        }
-    ];
+    // Демо-данные удалены — теперь пустой список по умолчанию
+    // Объявления создаются только через интерфейс шефа/су-шефа
 
     function initAnnouncements() {
-        // Загружаем из localStorage или демо
+        // Версионирование: если версия хранилища устарела — очищаем
+        const STORAGE_VERSION = 'v7.3.1';
+        const savedVersion = SafeStorage.getItem('cb_ann_version');
+
+        if (savedVersion !== STORAGE_VERSION) {
+            // Очищаем старые данные при обновлении
+            SafeStorage.removeItem('cb_announcements');
+            SafeStorage.setItem('cb_ann_version', STORAGE_VERSION);
+            console.log('Announcements storage cleared (version update)');
+        }
+
+        // Загружаем из localStorage
         const saved = SafeStorage.getItem('cb_announcements');
         if (saved) {
-            try { announcements = JSON.parse(saved); } catch(e) { announcements = JSON.parse(JSON.stringify(ANNOUNCEMENTS_BASE)); }
+            try { 
+                announcements = JSON.parse(saved); 
+            } catch(e) { 
+                announcements = []; 
+            }
         } else {
-            announcements = JSON.parse(JSON.stringify(ANNOUNCEMENTS_BASE));
+            // Пустой список по умолчанию (без демо!)
+            announcements = [];
         }
         updateAnnBadge();
     }
@@ -4966,6 +4933,21 @@
     function closeAnnouncements() {
         document.getElementById('announcementsScreen').classList.remove('active');
         document.body.style.overflow = '';
+    }
+
+    // Функция для полного сброса объявлений (только для шефа)
+    function resetAllAnnouncements() {
+        const role = ROLES[currentRole];
+        if (!role.canDelete) {
+            showAnnToast('❌ Только шеф может сбросить');
+            return;
+        }
+        if (!confirm('⚠️ Удалить ВСЕ объявления? Это действие нельзя отменить!')) return;
+        announcements = [];
+        persistAnnouncements();
+        renderAnnouncements();
+        updateAnnBadge();
+        showAnnToast('🗑 Все объявления удалены');
     }
 
     function renderAnnouncements() {
@@ -5100,6 +5082,16 @@
 
     function deleteAnnouncement() {
         if (!selectedAnnouncement) return;
+
+        // Проверка прав: удалять может только шеф или автор объявления
+        const role = ROLES[currentRole];
+        const isAuthor = selectedAnnouncement.authorRole === currentRole;
+
+        if (!role.canDelete && !isAuthor) {
+            showAnnToast('❌ Только шеф или автор может удалить');
+            return;
+        }
+
         if (!confirm('Удалить это объявление?')) return;
         announcements = announcements.filter(a => a.id !== selectedAnnouncement.id);
         persistAnnouncements();
