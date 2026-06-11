@@ -289,13 +289,6 @@
         :root.dark .bottom-nav { background: linear-gradient(to top, #0a0a0a, rgba(10,10,10,0.95)); border-top: 1px solid #2a2a2a; }
         :root.dark .nav-btn.active { color: var(--gold); }
         :root.dark .photo-hint a { color: var(--gold); }
-        :root.dark #supplierModal .modal { background: #141414; border: 1px solid #2a2a2a; }
-        :root.dark #supplierModal .form-input,
-        :root.dark #supplierModal .form-select,
-        :root.dark #supplierModal .form-textarea { background: #0a0a0a; border-color: #2a2a2a; }
-        :root.dark #supplierModal .form-input:focus,
-        :root.dark #supplierModal .form-select:focus,
-        :root.dark #supplierModal .form-textarea:focus { border-color: var(--gold); }
 
         ::-webkit-scrollbar { width: 6px; }
         :root.dark .theme-toggle { border-color: var(--gold); background: #1a1a1a; }
@@ -407,7 +400,66 @@
 
         ::-webkit-scrollbar-thumb:hover { background: var(--accent-soft); }
         @media (max-width: 768px) { ::-webkit-scrollbar { display: none; } }
-    </style>
+    
+        /* === ОБЪЯВЛЕНИЯ === */
+        .ann-screen { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-primary); z-index: 200; overflow-y: auto; }
+        .ann-screen.active { display: block; }
+        .ann-filters { padding: 12px 16px; display: flex; gap: 8px; overflow-x: auto; background: var(--bg-primary); border-bottom: 1px solid var(--border); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .ann-filters::-webkit-scrollbar { display: none; }
+        .ann-filter-btn { padding: 8px 16px; background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 20px; color: var(--text-secondary); font-size: 13px; white-space: nowrap; cursor: pointer; transition: all 0.3s; user-select: none; font-weight: 500; }
+        .ann-filter-btn.active { background: var(--accent-primary); color: #ffffff; border-color: var(--accent-primary); font-weight: 600; box-shadow: 0 2px 8px rgba(184,92,56,0.25); }
+        .ann-list { padding: 16px; padding-bottom: 100px; }
+        .ann-card { background: var(--bg-card); border-radius: 16px; margin-bottom: 12px; overflow: hidden; border: 1.5px solid var(--border); transition: all 0.3s; cursor: pointer; user-select: none; box-shadow: 0 2px 8px var(--shadow); position: relative; }
+        .ann-card:hover { background: var(--bg-card-hover); border-color: var(--border-strong); box-shadow: 0 4px 16px var(--shadow-hover); transform: translateY(-1px); }
+        .ann-card.pinned { border-left: 4px solid var(--gold); background: var(--bg-secondary); }
+        .ann-card.high { border-left: 4px solid var(--status-red); }
+        .ann-card.normal { border-left: 4px solid var(--accent-primary); }
+        .ann-card.low { border-left: 4px solid var(--text-muted); }
+        .ann-card.read { opacity: 0.7; }
+        .ann-card-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 16px 8px 16px; }
+        .ann-card-title { font-size: 16px; font-weight: 600; color: var(--text-primary); flex: 1; padding-right: 8px; }
+        .ann-card-priority { font-size: 10px; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; font-weight: 700; white-space: nowrap; }
+        .ann-card-priority.high { background: var(--status-red); color: #fff; }
+        .ann-card-priority.normal { background: var(--accent-primary); color: #fff; }
+        .ann-card-priority.low { background: var(--text-muted); color: #fff; }
+        .ann-card-text { padding: 0 16px 12px 16px; color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
+        .ann-card-meta { display: flex; justify-content: space-between; align-items: center; padding: 0 16px 16px 16px; font-size: 12px; color: var(--text-muted); }
+        .ann-card-author { display: flex; align-items: center; gap: 6px; }
+        .ann-card-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; }
+        .ann-card-pin { position: absolute; top: 8px; right: 8px; font-size: 16px; }
+        .ann-card-unread { position: absolute; top: 16px; right: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--status-red); }
+        .ann-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .ann-empty-icon { font-size: 48px; margin-bottom: 16px; }
+        .ann-fab { position: fixed; bottom: 80px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--accent-primary); color: #fff; border: none; font-size: 28px; cursor: pointer; box-shadow: 0 4px 16px rgba(184,92,56,0.4); z-index: 90; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+        .ann-fab:hover { transform: scale(1.05); }
+        .ann-fab:active { transform: scale(0.95); }
+        .ann-view-content { padding: 20px; min-height: calc(100vh - 200px); }
+        .ann-view-title { font-size: 22px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+        .ann-view-meta { color: var(--text-muted); font-size: 13px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+        .ann-view-text { font-size: 16px; line-height: 1.7; color: var(--text-secondary); white-space: pre-wrap; }
+        .ann-view-actions { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-top: 1px solid var(--border); padding: 12px 16px 24px 16px; display: flex; gap: 12px; z-index: 100; }
+        .ann-btn { flex: 1; padding: 14px; border-radius: 12px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.2s; }
+        .ann-btn-primary { background: var(--accent-primary); color: #fff; }
+        .ann-btn-secondary { background: var(--bg-secondary); color: var(--text-secondary); border: 1.5px solid var(--border); }
+        .ann-btn-success { background: var(--status-green); color: #fff; }
+        .ann-btn-danger { background: var(--status-red); color: #fff; }
+        .ann-form-group { padding: 16px; }
+        .ann-form-group label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .ann-form-group input, .ann-form-group textarea, .ann-form-group select { width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 12px; background: var(--bg-primary); color: var(--text-primary); font-size: 15px; outline: none; transition: all 0.3s; }
+        .ann-form-group input:focus, .ann-form-group textarea:focus, .ann-form-group select:focus { border-color: var(--accent-primary); }
+        .ann-form-group textarea { min-height: 120px; resize: vertical; }
+        .ann-checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 16px; }
+        .ann-checkbox-group label { background: var(--bg-card); padding: 10px 16px; border-radius: 20px; font-size: 14px; border: 1.5px solid var(--border); cursor: pointer; user-select: none; color: var(--text-secondary); transition: all 0.2s; }
+        .ann-checkbox-group input { display: none; }
+        .ann-checkbox-group input:checked + label { background: var(--accent-primary); border-color: var(--accent-primary); color: #fff; }
+        .ann-toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100%); background: var(--accent-primary); color: #fff; padding: 14px 28px; border-radius: 12px; z-index: 1000; font-size: 14px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.3); opacity: 0; transition: all 0.4s ease; pointer-events: none; }
+        .ann-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .nav-badge { position: absolute; top: -4px; right: -4px; background: var(--status-red); color: #fff; border-radius: 50%; min-width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; padding: 0 4px; }
+        :root.dark .ann-card.pinned { background: #1a1a1a; border-left-color: var(--gold); }
+        :root.dark .ann-filter-btn.active { background: var(--accent-primary); box-shadow: 0 2px 12px rgba(139,28,28,0.4); }
+        :root.dark .ann-checkbox-group input:checked + label { background: var(--accent-primary); border-color: var(--accent-primary); }
+        :root.dark .ann-fab { background: var(--accent-primary); box-shadow: 0 4px 16px rgba(139,28,28,0.4); }
+</style>
     
 <base target="_blank">
 <base target="_blank">
@@ -502,6 +554,10 @@
             </button>
             <button class="nav-btn" id="addDishBtn" onclick="openAddModal()" style="display:none;">
                 <span class="nav-icon">➕</span><span>Добавить</span>
+            </button>
+            <button class="nav-btn" onclick="openAnnouncements()" style="position:relative;">
+                <span class="nav-icon">📢</span><span>Объявления</span>
+                <span class="nav-badge" id="navAnnBadge" style="display:none">0</span>
             </button>
             <button class="nav-btn" onclick="openSuppliers()">
                 <span class="nav-icon">🚚</span><span>Поставщики</span>
@@ -598,63 +654,6 @@
         </div>
     </div>
 
-    <!-- === МОДАЛЬНОЕ ОКНО: ПОСТАВЩИК === -->
-    <div id="supplierModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <div class="modal-title" id="supplierModalTitle">Новый поставщик</div>
-                <button class="modal-close" onclick="closeSupplierModal()">✕</button>
-            </div>
-            <form id="supplierForm" onsubmit="saveSupplier(event)">
-                <input type="hidden" id="editSupplierId">
-                <div class="form-group">
-                    <label class="form-label">Название</label>
-                    <input type="text" class="form-input" id="formSupName" required placeholder="Название поставщика">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Категория</label>
-                    <select class="form-select" id="formSupCategory" required>
-                        <option value="хлеб">Хлеб</option>
-                        <option value="молочка">Молочка</option>
-                        <option value="уголь">Уголь/Газ</option>
-                        <option value="лаваш">Лаваш</option>
-                        <option value="мясо">Мясо/Десерты</option>
-                        <option value="фри">Фри/Заморозка</option>
-                        <option value="овощи">Овощи</option>
-                        <option value="курица">Курица</option>
-                        <option value="рыба">Рыба</option>
-                        <option value="другое">Другое</option>
-                    </select>
-                </div>
-                <div style="display:flex;gap:12px;">
-                    <div class="form-group" style="flex:1;">
-                        <label class="form-label">Телефон</label>
-                        <input type="text" class="form-input" id="formSupPhone" required placeholder="8-900-000-00-00">
-                    </div>
-                    <div class="form-group" style="flex:1;">
-                        <label class="form-label">Код (если есть)</label>
-                        <input type="text" class="form-input" id="formSupCode" placeholder="0000">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Ассортимент</label>
-                    <div id="supplierItemsList">
-                        <div class="ingredient-form-row">
-                            <input type="text" class="form-input" placeholder="Товар" data-sup-item>
-                            <button type="button" class="btn-remove-ing" onclick="removeSupplierItemRow(this)">✕</button>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-add-ing" onclick="addSupplierItemRow()">+ Добавить товар</button>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">График и условия</label>
-                    <textarea class="form-textarea" id="formSupSchedule" placeholder="Заявки: ... Привоз: ..."></textarea>
-                </div>
-                <button type="submit" class="btn-save">💾 Сохранить поставщика</button>
-            </form>
-        </div>
-    </div>
-
     <!-- === РАЗДЕЛ ПОСТАВЩИКИ === -->
     <div id="suppliersScreen">
         <div class="header" style="position:sticky;top:0;">
@@ -667,9 +666,8 @@
                 <button onclick="closeSuppliers()" style="background:var(--bg-card);border:2px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text-primary);font-size:13px;cursor:pointer;white-space:nowrap;">✕</button>
             </div>
         </div>
-        <div style="padding:12px 16px;background:var(--bg-primary);border-bottom:1px solid var(--border);display:flex;gap:8px;flex-direction:column;">
+        <div style="padding:12px 16px;background:var(--bg-primary);border-bottom:1px solid var(--border);">
             <button onclick="closeSuppliers()" style="width:100%;padding:12px;background:var(--bg-card);border:2px solid var(--border);border-radius:12px;color:var(--text-primary);font-size:14px;font-weight:600;cursor:pointer;">← Вернуться к технологическим картам</button>
-            <button id="addSupplierBtn" onclick="openAddSupplierModal()" style="display:none;width:100%;padding:12px;background:var(--accent-primary);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">➕ Добавить поставщика</button>
         </div>
         <div class="search-container">
             <input type="text" class="search-box" id="supplierSearch" placeholder="Поиск по названию, телефону или товару..." oninput="searchSuppliers()">
@@ -4016,7 +4014,7 @@
 ];
 
     // === ПОСТАВЩИКИ ===
-    const SUPPLIERS_BASE = [
+    const SUPPLIERS = [
         {name: "Хлебокомбинат Бежецкий", category: "хлеб", phone: "32-79-00", code: "6320", items: ["Бородинский хлеб", "Чиабатта"], schedule: "Заявки: кроме воскресенья. Привоз: на следующий день"},
         {name: "Хлебокомбинат Бежецкий (батон)", category: "хлеб", phone: "32-77-00", code: "6320", items: ["Батон в инд. упаковке"], schedule: "Заявки: кроме воскресенья. Привоз: на следующий день"},
         {name: "ИП Кузнецов", category: "уголь", phone: "8-903-819-36-44", items: ["Уголь", "Газовые баллоны"], schedule: "Привоз: среда, пятница"},
@@ -4125,7 +4123,6 @@
     let dishes = [];
     let favorites = JSON.parse(SafeStorage.getItem('cb_favorites') || '[]');
     let notes = JSON.parse(SafeStorage.getItem('cb_notes') || '{}');
-    let suppliers = [];
     let expandedCard = null;
     let currentFilter = 'all';
     let searchTerm = '';
@@ -4705,30 +4702,15 @@
         const role = ROLES[currentRole];
         const canEdit = role.canManageSuppliers;
 
-        // Показываем/скрываем кнопку добавления
-        const addBtn = document.getElementById('addSupplierBtn');
-        if (addBtn) {
-            addBtn.style.display = canEdit ? 'block' : 'none';
-        }
-
-        container.innerHTML = suppliers.map((s, idx) => {
-            let actions = '';
-            if (canEdit) {
-                actions = `
-                <div class="card-actions" style="margin-top:12px;">
-                    <button class="action-btn btn-edit" onclick="event.stopPropagation();openEditSupplierModal(${idx})">✏️ Редактировать</button>
-                    <button class="action-btn btn-delete" onclick="event.stopPropagation();deleteSupplier(${idx})">🗑️ Удалить</button>
-                </div>`;
-            }
-            return `
-        <div class="dish-card supplier-card" data-category="${s.category}" data-supplier-idx="${idx}" onclick="toggleCard(this)">
+        container.innerHTML = SUPPLIERS.map(s => `
+        <div class="dish-card supplier-card" data-category="${s.category}" onclick="toggleCard(this)">
             <div class="dish-header">
                 <div class="dish-photo" style="font-size:24px;">${getSupplierEmoji(s.category)}</div>
                 <div class="dish-info">
                     <div class="dish-name">${escapeHtml(s.name)} <span style="background:var(--accent-primary);color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;">${s.category.toUpperCase()}</span></div>
                     <div class="dish-meta">
                         <span class="meta-item">📞 <strong>${escapeHtml(s.phone)}</strong></span>
-                        ${s.code ? '<span class="meta-item">Код: <strong>' + escapeHtml(s.code) + '</strong></span>' : ''}
+                        ${s.code ? '<span class="meta-item">Код: <strong>' + s.code + '</strong></span>' : ''}
                     </div>
                 </div>
             </div>
@@ -4739,10 +4721,8 @@
                 </div>
                 <div class="section-title">Условия</div>
                 <div class="tech-text">${escapeHtml(s.schedule)}</div>
-                ${actions}
             </div>
-        </div>`;
-        }).join('');
+        </div>`).join('');
     }
 
     function getSupplierEmoji(cat) {
@@ -4750,109 +4730,7 @@
         return map[cat] || '📦';
     }
 
-
-    // === CRUD ПОСТАВЩИКОВ ===
-    function openAddSupplierModal() {
-        document.getElementById('supplierModalTitle').textContent = '➕ Новый поставщик';
-        document.getElementById('editSupplierId').value = '';
-        document.getElementById('formSupName').value = '';
-        document.getElementById('formSupCategory').value = 'овощи';
-        document.getElementById('formSupPhone').value = '';
-        document.getElementById('formSupCode').value = '';
-        document.getElementById('formSupSchedule').value = '';
-        document.getElementById('supplierItemsList').innerHTML = '<div class="ingredient-form-row"><input type="text" class="form-input" placeholder="Товар" data-sup-item><button type="button" class="btn-remove-ing" onclick="removeSupplierItemRow(this)">✕</button></div>';
-        document.getElementById('supplierModal').classList.add('active');
-    }
-
-    function openEditSupplierModal(idx) {
-        const s = suppliers[idx];
-        if (!s) return;
-        document.getElementById('supplierModalTitle').textContent = '✏️ Редактировать: ' + s.name;
-        document.getElementById('editSupplierId').value = idx;
-        document.getElementById('formSupName').value = s.name;
-        document.getElementById('formSupCategory').value = s.category;
-        document.getElementById('formSupPhone').value = s.phone;
-        document.getElementById('formSupCode').value = s.code || '';
-        document.getElementById('formSupSchedule').value = s.schedule || '';
-
-        const itemsHtml = s.items.map(item =>
-            '<div class="ingredient-form-row"><input type="text" class="form-input" value="' + escapeHtml(item) + '" data-sup-item><button type="button" class="btn-remove-ing" onclick="removeSupplierItemRow(this)">✕</button></div>'
-        ).join('');
-        document.getElementById('supplierItemsList').innerHTML = itemsHtml || '<div class="ingredient-form-row"><input type="text" class="form-input" placeholder="Товар" data-sup-item><button type="button" class="btn-remove-ing" onclick="removeSupplierItemRow(this)">✕</button></div>';
-
-        document.getElementById('supplierModal').classList.add('active');
-    }
-
-    function closeSupplierModal() {
-        document.getElementById('supplierModal').classList.remove('active');
-    }
-
-    function addSupplierItemRow() {
-        const div = document.createElement('div');
-        div.className = 'ingredient-form-row';
-        div.innerHTML = '<input type="text" class="form-input" placeholder="Товар" data-sup-item><button type="button" class="btn-remove-ing" onclick="removeSupplierItemRow(this)">✕</button>';
-        document.getElementById('supplierItemsList').appendChild(div);
-    }
-
-    function removeSupplierItemRow(btn) {
-        btn.parentElement.remove();
-    }
-
-    function saveSupplier(e) {
-        e.preventDefault();
-        const editIdx = document.getElementById('editSupplierId').value;
-        const name = document.getElementById('formSupName').value.trim();
-        const category = document.getElementById('formSupCategory').value;
-        const phone = document.getElementById('formSupPhone').value.trim();
-        const code = document.getElementById('formSupCode').value.trim();
-        const schedule = document.getElementById('formSupSchedule').value.trim();
-
-        const items = [];
-        document.querySelectorAll('#supplierItemsList .ingredient-form-row').forEach(row => {
-            const val = row.querySelector('[data-sup-item]').value.trim();
-            if (val) items.push(val);
-        });
-
-        const supplierData = { name, category, phone, code: code || null, items, schedule };
-
-        if (editIdx !== '') {
-            suppliers[parseInt(editIdx)] = supplierData;
-        } else {
-            suppliers.push(supplierData);
-        }
-
-        persistSuppliers();
-        closeSupplierModal();
-        renderSuppliers();
-    }
-
-    function deleteSupplier(idx) {
-        if (!confirm('Удалить поставщика "' + suppliers[idx].name + '"?')) return;
-        suppliers.splice(idx, 1);
-        persistSuppliers();
-        renderSuppliers();
-    }
-
-    function persistSuppliers() {
-        SafeStorage.setItem('cb_suppliers', JSON.stringify(suppliers));
-    }
-
-    function loadSuppliers() {
-        const saved = SafeStorage.getItem('cb_suppliers');
-        if (saved) {
-            try {
-                suppliers = JSON.parse(saved);
-            } catch(e) {
-                suppliers = JSON.parse(JSON.stringify(SUPPLIERS_BASE));
-            }
-        } else {
-            suppliers = JSON.parse(JSON.stringify(SUPPLIERS_BASE));
-        }
-    }
-
     function openSuppliers() {
-        loadSuppliers();
-        renderSuppliers();
         document.getElementById('suppliersScreen').style.display = 'block';
         document.body.style.overflow = 'hidden';
         // Устанавливаем бейдж доступа
@@ -4881,13 +4759,6 @@
             card.style.display = card.textContent.toLowerCase().includes(term) ? 'block' : 'none';
         });
     }
-
-    // === ESC для закрытия модалки поставщиков ===
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeSupplierModal();
-        }
-    });
 
     function filterSuppliers(cat) {
         document.querySelectorAll('#suppliersScreen .filter-btn').forEach(b => b.classList.remove('active'));
@@ -4997,7 +4868,357 @@
         if (e.key === 'Escape') closeLightbox();
     });
 
+    
+    // === ОБЪЯВЛЕНИЯ ===
+    let announcements = [];
+    let currentAnnFilter = 'all';
+    let selectedAnnouncement = null;
+
+    // Демо-данные (потом заменим на Firebase)
+    const ANNOUNCEMENTS_BASE = [
+        {
+            id: 'ann_001',
+            title: 'Собрание персонала',
+            text: 'Завтра 12 июня в 10:00 собрание всего персонала. Тема: презентация летнего меню и новых техник подачи. Присутствие обязательно.',
+            author: 'Дима',
+            authorRole: 'chef',
+            priority: 'high',
+            targetRoles: ['all'],
+            pinned: true,
+            createdAt: '2026-06-11T08:00:00Z',
+            readBy: {}
+        },
+        {
+            id: 'ann_002',
+            title: 'Новый поставщик мяса',
+            text: 'С понедельника работаем с "Мясной дворик". Цены на говядину снизились на 8%. Новые контакты в разделе Поставщики.',
+            author: 'Дима',
+            authorRole: 'chef',
+            priority: 'normal',
+            targetRoles: ['all'],
+            pinned: false,
+            createdAt: '2026-06-10T14:30:00Z',
+            readBy: { chef: '2026-06-10T15:00:00Z' }
+        },
+        {
+            id: 'ann_003',
+            title: 'Проверка чистоты зоны горячего цеха',
+            text: 'Сегодня в 16:00 проверка. Прошу всех поваров подготовить рабочие места. Особое внимание — вытяжке и жарочным поверхностям.',
+            author: 'Надя',
+            authorRole: 'sous',
+            priority: 'high',
+            targetRoles: ['cook'],
+            pinned: false,
+            createdAt: '2026-06-11T06:00:00Z',
+            readBy: {}
+        },
+        {
+            id: 'ann_004',
+            title: 'Изменение в ТК: соус к утке',
+            text: 'Убрали сахар (было 15г). Добавили 5г дижонской горчицы. Обновлённая ТК уже в системе.',
+            author: 'Дима',
+            authorRole: 'chef',
+            priority: 'normal',
+            targetRoles: ['cook', 'sous'],
+            pinned: false,
+            createdAt: '2026-06-09T16:00:00Z',
+            readBy: { chef: '2026-06-09T16:05:00Z' }
+        }
+    ];
+
+    function initAnnouncements() {
+        // Загружаем из localStorage или демо
+        const saved = SafeStorage.getItem('cb_announcements');
+        if (saved) {
+            try { announcements = JSON.parse(saved); } catch(e) { announcements = JSON.parse(JSON.stringify(ANNOUNCEMENTS_BASE)); }
+        } else {
+            announcements = JSON.parse(JSON.stringify(ANNOUNCEMENTS_BASE));
+        }
+        updateAnnBadge();
+    }
+
+    function openAnnouncements() {
+        document.getElementById('announcementsScreen').classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        // Показывать FAB только шефу и су-шефу
+        const role = ROLES[currentRole];
+        const fab = document.getElementById('annFab');
+        if (fab) {
+            fab.style.display = (role.canAdd || role.canEdit) ? 'flex' : 'none';
+        }
+
+        // Устанавливаем бейдж доступа
+        const badge = document.getElementById('annAccessBadge');
+        if (badge) {
+            if (role.canAdd || role.canEdit) {
+                badge.innerHTML = 'Полный доступ';
+                badge.style.color = 'var(--status-green)';
+            } else {
+                badge.innerHTML = '🔒 Только просмотр';
+                badge.style.color = 'var(--text-muted)';
+            }
+        }
+
+        renderAnnouncements();
+    }
+
+    function closeAnnouncements() {
+        document.getElementById('announcementsScreen').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    function renderAnnouncements() {
+        const list = document.getElementById('annList');
+        const role = ROLES[currentRole];
+
+        let filtered = announcements.filter(a => {
+            // Фильтр по роли
+            if (a.targetRoles.includes('all')) return true;
+            if (currentRole === 'chef') return true;
+            if (currentRole === 'sous' && (a.targetRoles.includes('sous') || a.targetRoles.includes('cook'))) return true;
+            if (a.targetRoles.includes(currentRole)) return true;
+            return false;
+        });
+
+        // Применить выбранный фильтр
+        if (currentAnnFilter === 'unread') {
+            filtered = filtered.filter(a => !a.readBy[currentRole]);
+        } else if (currentAnnFilter === 'high') {
+            filtered = filtered.filter(a => a.priority === 'high');
+        } else if (currentAnnFilter === 'pinned') {
+            filtered = filtered.filter(a => a.pinned);
+        }
+
+        // Сортировка: закреплённые сверху, потом по дате (новые сверху)
+        filtered.sort((a, b) => {
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return new Date(b.createdAt) - new Date(a.createdAt);
+        });
+
+        if (filtered.length === 0) {
+            list.innerHTML = '<div class="ann-empty"><div class="ann-empty-icon">📭</div><p>Нет объявлений</p></div>';
+            return;
+        }
+
+        list.innerHTML = filtered.map(a => {
+            const isRead = !!a.readBy[currentRole];
+            const dateStr = formatAnnDate(a.createdAt);
+            const priorityLabel = a.priority === 'high' ? 'ВАЖНО' : a.priority === 'normal' ? 'ОБЫЧНОЕ' : 'ИНФО';
+            const authorName = ROLES[a.authorRole]?.name || a.author;
+
+            return `<div class="ann-card ${a.priority} ${a.pinned ? 'pinned' : ''} ${isRead ? 'read' : ''}" onclick="openAnnView('${a.id}')">
+                ${a.pinned ? '<span class="ann-card-pin">📌</span>' : ''}
+                ${!isRead ? '<span class="ann-card-unread"></span>' : ''}
+                <div class="ann-card-header">
+                    <div class="ann-card-title">${escapeHtml(a.title)}</div>
+                    <span class="ann-card-priority ${a.priority}">${priorityLabel}</span>
+                </div>
+                <div class="ann-card-text">${escapeHtml(a.text.substring(0, 140))}${a.text.length > 140 ? '...' : ''}</div>
+                <div class="ann-card-meta">
+                    <div class="ann-card-author">
+                        <div class="ann-card-avatar">${authorName[0]}</div>
+                        <span>${escapeHtml(authorName)}</span>
+                    </div>
+                    <span>${dateStr}</span>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function formatAnnDate(iso) {
+        const d = new Date(iso);
+        const now = new Date();
+        const diff = now - d;
+        const days = Math.floor(diff / 86400000);
+        if (days === 0) return 'Сегодня, ' + d.toLocaleTimeString('ru', {hour:'2-digit', minute:'2-digit'});
+        if (days === 1) return 'Вчера, ' + d.toLocaleTimeString('ru', {hour:'2-digit', minute:'2-digit'});
+        return d.toLocaleDateString('ru', {day:'numeric', month:'short'}) + ' ' + d.toLocaleTimeString('ru', {hour:'2-digit', minute:'2-digit'});
+    }
+
+    function setAnnFilter(f) {
+        currentAnnFilter = f;
+        document.querySelectorAll('.ann-filter-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        renderAnnouncements();
+    }
+
+    function openAnnView(id) {
+        selectedAnnouncement = announcements.find(a => a.id === id);
+        if (!selectedAnnouncement) return;
+
+        const screen = document.getElementById('annViewScreen');
+        const content = document.getElementById('annViewContent');
+        const actions = document.getElementById('annViewActions');
+        const role = ROLES[currentRole];
+
+        const isRead = !!selectedAnnouncement.readBy[currentRole];
+        const dateStr = new Date(selectedAnnouncement.createdAt).toLocaleString('ru');
+        const targetText = selectedAnnouncement.targetRoles.includes('all') ? 'Для всех' : 
+            'Для: ' + selectedAnnouncement.targetRoles.map(r => ROLES[r]?.name || r).join(', ');
+        const priorityText = selectedAnnouncement.priority === 'high' ? '🔴 Высокий' : 
+            selectedAnnouncement.priority === 'normal' ? '🔵 Обычный' : '⚪ Низкий';
+        const authorName = ROLES[selectedAnnouncement.authorRole]?.name || selectedAnnouncement.author;
+
+        content.innerHTML = `
+            <div class="ann-view-title">${escapeHtml(selectedAnnouncement.title)}</div>
+            <div class="ann-view-meta">
+                ${escapeHtml(authorName)} • ${dateStr}<br>
+                ${targetText} • Приоритет: ${priorityText}
+                ${selectedAnnouncement.pinned ? ' • 📌 Закреплено' : ''}
+            </div>
+            <div class="ann-view-text">${escapeHtml(selectedAnnouncement.text)}</div>
+        `;
+
+        actions.innerHTML = '';
+
+        if (!isRead) {
+            actions.innerHTML += `<button class="ann-btn ann-btn-success" onclick="markAnnRead()">✓ Прочитано</button>`;
+        }
+        if (role.canDelete || (role.canEdit && selectedAnnouncement.authorRole === currentRole)) {
+            actions.innerHTML += `<button class="ann-btn ann-btn-danger" onclick="deleteAnnouncement()">🗑 Удалить</button>`;
+        }
+
+        screen.classList.add('active');
+    }
+
+    function closeAnnView() {
+        document.getElementById('annViewScreen').classList.remove('active');
+        selectedAnnouncement = null;
+        renderAnnouncements();
+        updateAnnBadge();
+    }
+
+    function markAnnRead() {
+        if (!selectedAnnouncement) return;
+        selectedAnnouncement.readBy[currentRole] = new Date().toISOString();
+        persistAnnouncements();
+        closeAnnView();
+        showAnnToast('✓ Отмечено как прочитанное');
+    }
+
+    function deleteAnnouncement() {
+        if (!selectedAnnouncement) return;
+        if (!confirm('Удалить это объявление?')) return;
+        announcements = announcements.filter(a => a.id !== selectedAnnouncement.id);
+        persistAnnouncements();
+        closeAnnView();
+        showAnnToast('🗑 Объявление удалено');
+    }
+
+    function openAnnCreate() {
+        document.getElementById('annCreateScreen').classList.add('active');
+        document.getElementById('annFormTitle').value = '';
+        document.getElementById('annFormText').value = '';
+        document.getElementById('annFormPriority').value = 'normal';
+        document.getElementById('annFormPinned').checked = false;
+        document.getElementById('annRoleAll').checked = true;
+        document.getElementById('annRoleCook').checked = false;
+        document.getElementById('annRoleSous').checked = false;
+        document.getElementById('annRoleWaiter').checked = false;
+    }
+
+    function closeAnnCreate() {
+        document.getElementById('annCreateScreen').classList.remove('active');
+    }
+
+    function toggleAnnRoleAll() {
+        const allChecked = document.getElementById('annRoleAll').checked;
+        if (allChecked) {
+            document.getElementById('annRoleCook').checked = false;
+            document.getElementById('annRoleSous').checked = false;
+            document.getElementById('annRoleWaiter').checked = false;
+        }
+    }
+
+    function toggleAnnRole(role) {
+        document.getElementById('annRoleAll').checked = false;
+    }
+
+    function saveAnnouncement() {
+        const title = document.getElementById('annFormTitle').value.trim();
+        const text = document.getElementById('annFormText').value.trim();
+        const priority = document.getElementById('annFormPriority').value;
+        const pinned = document.getElementById('annFormPinned').checked;
+
+        if (!title || !text) {
+            showAnnToast('❌ Заполните заголовок и текст');
+            return;
+        }
+
+        const roles = [];
+        if (document.getElementById('annRoleAll').checked) {
+            roles.push('all');
+        } else {
+            if (document.getElementById('annRoleCook').checked) roles.push('cook');
+            if (document.getElementById('annRoleSous').checked) roles.push('sous');
+            if (document.getElementById('annRoleWaiter').checked) roles.push('waiter');
+        }
+        if (roles.length === 0) roles.push('all');
+
+        const newAnn = {
+            id: 'ann_' + Date.now(),
+            title, text, priority, pinned,
+            author: ROLES[currentRole].name,
+            authorRole: currentRole,
+            targetRoles: roles,
+            createdAt: new Date().toISOString(),
+            readBy: { [currentRole]: new Date().toISOString() }
+        };
+
+        announcements.push(newAnn);
+        persistAnnouncements();
+        closeAnnCreate();
+        renderAnnouncements();
+        updateAnnBadge();
+        showAnnToast('📢 Объявление опубликовано!');
+    }
+
+    function persistAnnouncements() {
+        SafeStorage.setItem('cb_announcements', JSON.stringify(announcements));
+    }
+
+    function updateAnnBadge() {
+        const unreadCount = announcements.filter(a => {
+            if (a.readBy[currentRole]) return false;
+            if (a.targetRoles.includes('all')) return true;
+            if (currentRole === 'chef') return true;
+            if (currentRole === 'sous' && (a.targetRoles.includes('sous') || a.targetRoles.includes('cook'))) return true;
+            if (a.targetRoles.includes(currentRole)) return true;
+            return false;
+        }).length;
+
+        const badge = document.getElementById('navAnnBadge');
+        if (badge) {
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // Показываем toast при входе, если есть непрочитанные
+        if (unreadCount > 0 && !window.annToastShown) {
+            window.annToastShown = true;
+            setTimeout(() => {
+                showAnnToast(`📢 ${unreadCount} новых объявлений!`);
+            }, 1500);
+        }
+    }
+
+    function showAnnToast(message) {
+        const toast = document.getElementById('annToast');
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
     // === СТАРТ ===
+    init();
+    initAnnouncements();
+
     init();
     </script>
 
@@ -5007,5 +5228,94 @@
         <div id="lightboxEmoji" style="font-size:140px;display:none;text-shadow:0 0 40px rgba(255,255,255,0.3);"></div>
         <div style="position:absolute;top:16px;right:20px;color:#fff;font-size:32px;cursor:pointer;padding:10px;z-index:10001;">✕</div>
     </div>
+
+    <!-- === ЭКРАН ОБЪЯВЛЕНИЙ === -->
+    <div id="announcementsScreen" class="ann-screen">
+        <div class="header" style="position:sticky;top:0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <button onclick="closeAnnouncements()" style="background:var(--accent-primary);border:none;border-radius:10px;padding:10px 14px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">← ТК</button>
+                <div style="text-align:center;flex:1;">
+                    <div class="logo" style="font-size:18px;margin-bottom:2px;">📢 ОБЪЯВЛЕНИЯ</div>
+                    <div class="subtitle" style="font-size:10px;"><span id="annAccessBadge">Сообщения от шефа</span></div>
+                </div>
+                <button onclick="closeAnnouncements()" style="background:var(--bg-card);border:2px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text-primary);font-size:13px;cursor:pointer;white-space:nowrap;">✕</button>
+            </div>
+        </div>
+        <div class="ann-filters">
+            <button class="ann-filter-btn active" onclick="setAnnFilter('all')">Все</button>
+            <button class="ann-filter-btn" onclick="setAnnFilter('unread')">Непрочитанные</button>
+            <button class="ann-filter-btn" onclick="setAnnFilter('high')">Важные</button>
+            <button class="ann-filter-btn" onclick="setAnnFilter('pinned')">Закреплённые</button>
+        </div>
+        <div class="ann-list" id="annList"></div>
+        <button class="ann-fab" id="annFab" onclick="openAnnCreate()" style="display:none;">+</button>
+    </div>
+
+    <!-- === ЭКРАН ПРОСМОТРА ОБЪЯВЛЕНИЯ === -->
+    <div id="annViewScreen" class="ann-screen">
+        <div class="header" style="position:sticky;top:0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <button onclick="closeAnnView()" style="background:var(--accent-primary);border:none;border-radius:10px;padding:10px 14px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">← Назад</button>
+                <div style="text-align:center;flex:1;">
+                    <div class="logo" style="font-size:18px;margin-bottom:2px;">📢 ОБЪЯВЛЕНИЕ</div>
+                </div>
+                <div style="width:60px;"></div>
+            </div>
+        </div>
+        <div class="ann-view-content" id="annViewContent"></div>
+        <div class="ann-view-actions" id="annViewActions"></div>
+    </div>
+
+    <!-- === ЭКРАН СОЗДАНИЯ ОБЪЯВЛЕНИЯ === -->
+    <div id="annCreateScreen" class="ann-screen">
+        <div class="header" style="position:sticky;top:0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <button onclick="closeAnnCreate()" style="background:var(--accent-primary);border:none;border-radius:10px;padding:10px 14px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">← Отмена</button>
+                <div style="text-align:center;flex:1;">
+                    <div class="logo" style="font-size:18px;margin-bottom:2px;">✏️ НОВОЕ</div>
+                </div>
+                <div style="width:60px;"></div>
+            </div>
+        </div>
+        <div style="padding-bottom:100px;">
+            <div class="ann-form-group">
+                <label>Заголовок</label>
+                <input type="text" id="annFormTitle" placeholder="Например: Собрание персонала">
+            </div>
+            <div class="ann-form-group">
+                <label>Текст объявления</label>
+                <textarea id="annFormText" placeholder="Опишите подробности..."></textarea>
+            </div>
+            <div class="ann-form-group">
+                <label>Приоритет</label>
+                <select id="annFormPriority">
+                    <option value="low">Низкий (информация)</option>
+                    <option value="normal" selected>Обычный</option>
+                    <option value="high">Высокий (срочно!)</option>
+                </select>
+            </div>
+            <div class="ann-form-group">
+                <label>Для кого</label>
+            </div>
+            <div class="ann-checkbox-group">
+                <input type="checkbox" id="annRoleAll" checked onchange="toggleAnnRoleAll()"><label for="annRoleAll">Все</label>
+                <input type="checkbox" id="annRoleCook" onchange="toggleAnnRole('cook')"><label for="annRoleCook">Повара</label>
+                <input type="checkbox" id="annRoleSous" onchange="toggleAnnRole('sous')"><label for="annRoleSous">Су-шефы</label>
+                <input type="checkbox" id="annRoleWaiter" onchange="toggleAnnRole('waiter')"><label for="annRoleWaiter">Официанты</label>
+            </div>
+            <div class="ann-form-group" style="padding-top:8px;">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;text-transform:none;">
+                    <input type="checkbox" id="annFormPinned" style="width:20px;height:20px;">
+                    📌 Закрепить сверху
+                </label>
+            </div>
+            <div class="ann-form-group" style="padding-top:8px;">
+                <button class="ann-btn ann-btn-primary" onclick="saveAnnouncement()" style="width:100%;">📢 Опубликовать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast уведомление -->
+    <div id="annToast" class="ann-toast"></div>
 </body>
 </html>
