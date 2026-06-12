@@ -243,7 +243,8 @@
         .cook-hint { font-size: 12px; color: var(--text-muted); margin-top: 16px; padding: 10px; background: var(--bg-secondary); border-radius: 8px; }
 
         /* === ПОСТАВЩИКИ === */
-        #suppliersScreen { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-primary); z-index: 200; overflow-y: auto; }
+        #suppliersScreen { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-primary); z-index: 200; overflow: hidden; }
+        .suppliers-scroll { height: calc(100vh - 180px); overflow-y: auto; }
         .supplier-card { margin-bottom: 8px; }
         .supplier-card[data-category="хлеб"] { border-left: 4px solid #c4943a !important; }
         .supplier-card[data-category="молочка"] { border-left: 4px solid #4a7a9a !important; }
@@ -684,7 +685,10 @@
                 <button class="filter-btn" onclick="filterSuppliers('лаваш')">Лаваш</button>
             </div>
         </div>
-        <div class="content" id="suppliersList"></div>
+        <div class="suppliers-scroll">
+            <div class="content" id="suppliersList" style="padding-bottom:100px;"></div>
+        </div>
+        <button class="ann-fab" id="supplierFab" onclick="openAddSupplierModal()" style="display:none;position:absolute;bottom:20px;right:20px;z-index:10;">+</button>
     </div>
 
     <!-- Firebase SDK (CDN compat) -->
@@ -4151,6 +4155,18 @@
                 persistDishes();
             }
 
+            // Load suppliers from cache
+            const savedSuppliers = SafeStorage.getItem('cb_suppliers');
+            if (savedSuppliers) {
+                try {
+                    var cachedSuppliers = JSON.parse(savedSuppliers);
+                    if (Array.isArray(cachedSuppliers) && cachedSuppliers.length > 0) {
+                        SUPPLIERS.length = 0;
+                        cachedSuppliers.forEach(s => SUPPLIERS.push(s));
+                    }
+                } catch(e) {}
+            }
+
             const session = SafeStorage.getItem('cb_session');
             if (session) {
                 try {
@@ -4278,8 +4294,19 @@
         renderDishes();
         renderSuppliers();
 
+        // Загружаем поставщиков из Firebase
+        if (db) {
+            try {
+                await loadSuppliersFromFirebase();
+                renderSuppliers();
+            } catch(e) {}
+        }
+
         // Запускаем realtime sync для получения изменений от других
         startRealtimeSync();
+
+        // Инициализируем объявления (после логина, когда currentRole известен)
+        initAnnouncements();
     }
 
     // === ФОТО URL (fastpic.org) ===
@@ -4703,8 +4730,19 @@
         const role = ROLES[currentRole];
         const canEdit = role.canManageSuppliers;
 
-        container.innerHTML = SUPPLIERS.map(s => `
-        <div class="dish-card supplier-card" data-category="${s.category}" onclick="toggleCard(this)">
+        // Show/hide FAB
+        const fab = document.getElementById('supplierFab');
+        if (fab) fab.style.display = canEdit ? 'flex' : 'none';
+
+        container.innerHTML = SUPPLIERS.map((s, index) => {
+            let actions = '';
+            if (canEdit) {
+                actions = `<div class="card-actions" style="margin-top:12px;">
+                    <button class="action-btn btn-edit" onclick="event.stopPropagation();openEditSupplierModal(${index})">✏️ Редактировать</button>
+                    <button class="action-btn btn-delete" onclick="event.stopPropagation();deleteSupplier(${index})">🗑️ Удалить</button>
+                </div>`;
+            }
+            return `<div class="dish-card supplier-card" data-category="${s.category}" onclick="toggleCard(this)">
             <div class="dish-header">
                 <div class="dish-photo" style="font-size:24px;">${getSupplierEmoji(s.category)}</div>
                 <div class="dish-info">
@@ -4722,8 +4760,10 @@
                 </div>
                 <div class="section-title">Условия</div>
                 <div class="tech-text">${escapeHtml(s.schedule)}</div>
+                ${actions}
             </div>
-        </div>`).join('');
+        </div>`;
+        }).join('');
     }
 
     function getSupplierEmoji(cat) {
@@ -4752,6 +4792,120 @@
         const ss = document.getElementById('suppliersScreen');
         if (ss) ss.style.display = 'none';
         document.body.style.overflow = '';
+    }
+
+    // === CRUD ПОСТАВЩИКОВ ===
+    function openAddSupplierModal() {
+        document.getElementById('supplierModalTitle').textContent = '➕ Новый поставщик';
+        document.getElementById('supplierEditId').value = '';
+        document.getElementById('supplierFormName').value = '';
+        document.getElementById('supplierFormCategory').value = 'хлеб';
+        document.getElementById('supplierFormPhone').value = '';
+        document.getElementById('supplierFormCode').value = '';
+        document.getElementById('supplierFormItems').value = '';
+        document.getElementById('supplierFormSchedule').value = '';
+        document.getElementById('supplierModal').classList.add('active');
+    }
+
+    function openEditSupplierModal(index) {
+        const s = SUPPLIERS[index];
+        if (!s) return;
+        document.getElementById('supplierModalTitle').textContent = '✏️ Редактировать: ' + s.name;
+        document.getElementById('supplierEditId').value = index;
+        document.getElementById('supplierFormName').value = s.name;
+        document.getElementById('supplierFormCategory').value = s.category;
+        document.getElementById('supplierFormPhone').value = s.phone;
+        document.getElementById('supplierFormCode').value = s.code || '';
+        document.getElementById('supplierFormItems').value = s.items.join(', ');
+        document.getElementById('supplierFormSchedule').value = s.schedule;
+        document.getElementById('supplierModal').classList.add('active');
+    }
+
+    function closeSupplierModal() {
+        document.getElementById('supplierModal').classList.remove('active');
+    }
+
+    async function saveSupplier(e) {
+        e.preventDefault();
+        const editIndex = document.getElementById('supplierEditId').value;
+        const name = document.getElementById('supplierFormName').value.trim();
+        const category = document.getElementById('supplierFormCategory').value;
+        const phone = document.getElementById('supplierFormPhone').value.trim();
+        const code = document.getElementById('supplierFormCode').value.trim();
+        const itemsText = document.getElementById('supplierFormItems').value.trim();
+        const schedule = document.getElementById('supplierFormSchedule').value.trim();
+
+        const items = itemsText.split(',').map(i => i.trim()).filter(i => i);
+
+        const supplierData = {
+            name, category, phone, code: code || undefined,
+            items, schedule,
+            updated_at: new Date().toISOString(),
+            updated_by: currentRole
+        };
+
+        if (editIndex !== '') {
+            // Edit existing
+            const idx = parseInt(editIndex);
+            SUPPLIERS[idx] = Object.assign({}, SUPPLIERS[idx], supplierData);
+        } else {
+            // Add new
+            supplierData.created_at = new Date().toISOString();
+            supplierData.created_by = currentRole;
+            SUPPLIERS.push(supplierData);
+        }
+
+        persistSuppliers();
+        await saveSuppliersToFirebase();
+        closeSupplierModal();
+        renderSuppliers();
+        showAnnToast('💾 Поставщик сохранён');
+    }
+
+    async function deleteSupplier(index) {
+        if (!confirm('Удалить поставщика "' + SUPPLIERS[index].name + '"?')) return;
+        SUPPLIERS.splice(index, 1);
+        persistSuppliers();
+        await saveSuppliersToFirebase();
+        renderSuppliers();
+        showAnnToast('🗑 Поставщик удалён');
+    }
+
+    function persistSuppliers() {
+        SafeStorage.setItem('cb_suppliers', JSON.stringify(SUPPLIERS));
+    }
+
+    async function saveSuppliersToFirebase() {
+        if (!db) return false;
+        try {
+            await db.collection('suppliers').doc('main').set({ data: SUPPLIERS, updatedAt: new Date().toISOString() });
+            console.log('Suppliers saved to Firebase');
+            return true;
+        } catch(e) {
+            console.error('Firebase suppliers save error:', e);
+            return false;
+        }
+    }
+
+    async function loadSuppliersFromFirebase() {
+        if (!db) return false;
+        try {
+            var doc = await db.collection('suppliers').doc('main').get();
+            if (doc.exists) {
+                var data = doc.data();
+                if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+                    SUPPLIERS.length = 0;
+                    data.data.forEach(s => SUPPLIERS.push(s));
+                    persistSuppliers();
+                    console.log('Suppliers loaded from Firebase:', SUPPLIERS.length);
+                    return true;
+                }
+            }
+            return false;
+        } catch(e) {
+            console.error('Firebase suppliers load error:', e);
+            return false;
+        }
     }
 
     function searchSuppliers() {
@@ -4873,34 +5027,47 @@
 
     // === FIREBASE: ОБЪЯВЛЕНИЯ ===
     async function loadAnnouncementsFromFirebase() {
-        if (!db) return false;
+        console.log('>>> loadAnnouncementsFromFirebase called, db exists:', !!db);
+        if (!db) {
+            console.error('!!! db is NULL');
+            return false;
+        }
         try {
+            console.log('>>> Fetching from Firebase...');
             var snapshot = await db.collection('announcements').orderBy('createdAt', 'desc').get();
             var firebaseAnnouncements = [];
             snapshot.forEach(function(docSnap) {
                 firebaseAnnouncements.push(Object.assign({ id: docSnap.id }, docSnap.data()));
             });
+            console.log('>>> Fetched from Firebase:', firebaseAnnouncements.length, 'announcements');
             if (firebaseAnnouncements.length > 0) {
                 announcements = firebaseAnnouncements;
                 SafeStorage.setItem('cb_announcements', JSON.stringify(announcements));
-                console.log('Announcements loaded from Firebase:', announcements.length);
+                console.log('>>> SUCCESS: Loaded', announcements.length, 'announcements');
                 return true;
             }
+            console.log('>>> No announcements found in Firebase');
             return false;
         } catch(e) {
-            console.error('Firebase announcements load error:', e);
+            console.error('!!! Firebase load ERROR:', e.message, e.code);
             return false;
         }
     }
 
     async function saveAnnouncementToFirebase(ann) {
-        if (!db) return false;
+        console.log('>>> saveAnnouncementToFirebase called, db exists:', !!db);
+        if (!db) {
+            console.error('!!! db is NULL — Firebase not initialized');
+            return false;
+        }
         try {
+            console.log('>>> Saving to Firebase:', ann.id, ann.title);
             await db.collection('announcements').doc(ann.id).set(ann);
-            console.log('Announcement saved to Firebase:', ann.title);
+            console.log('>>> SUCCESS: Announcement saved to Firebase:', ann.title);
             return true;
         } catch(e) {
-            console.error('Firebase announcement save error:', e);
+            console.error('!!! Firebase announcement save ERROR:', e.message, e.code);
+            alert('Ошибка сохранения в Firebase: ' + e.message);
             return false;
         }
     }
@@ -4953,34 +5120,42 @@
     // Объявления создаются только через интерфейс шефа/су-шефа
 
     async function initAnnouncements() {
-        // Версионирование: если версия хранилища устарела — очищаем
-        const STORAGE_VERSION = 'v7.3.2';
+        console.log('>>> initAnnouncements START, currentRole:', currentRole, 'db exists:', !!db);
+
+        // Версионирование
+        const STORAGE_VERSION = 'v7.3.3';
         const savedVersion = SafeStorage.getItem('cb_ann_version');
 
         if (savedVersion !== STORAGE_VERSION) {
             SafeStorage.removeItem('cb_announcements');
             SafeStorage.setItem('cb_ann_version', STORAGE_VERSION);
-            console.log('Announcements storage cleared (version update)');
+            console.log('>>> Storage cleared (version update to', STORAGE_VERSION + ')');
         }
 
         // Сначала пробуем загрузить из Firebase
         var loadedFromCloud = false;
         if (db) {
             try {
+                console.log('>>> Loading from Firebase...');
                 var snapshot = await db.collection('announcements').orderBy('createdAt', 'desc').get();
                 var firebaseAnnouncements = [];
                 snapshot.forEach(function(docSnap) {
                     firebaseAnnouncements.push(Object.assign({ id: docSnap.id }, docSnap.data()));
                 });
+                console.log('>>> Firebase returned:', firebaseAnnouncements.length, 'items');
                 if (firebaseAnnouncements.length > 0) {
                     announcements = firebaseAnnouncements;
                     SafeStorage.setItem('cb_announcements', JSON.stringify(announcements));
                     loadedFromCloud = true;
-                    console.log('Announcements loaded from Firebase:', firebaseAnnouncements.length);
+                    console.log('>>> SUCCESS: Loaded from Firebase');
+                } else {
+                    console.log('>>> Firebase empty, using cache/local');
                 }
             } catch(e) {
-                console.log('Firebase announcements load failed:', e.message);
+                console.error('!!! Firebase load failed:', e.message, e.code);
             }
+        } else {
+            console.error('!!! db is NULL, cannot load from Firebase');
         }
 
         // Если не загрузили из облака — используем кэш
@@ -4989,18 +5164,19 @@
             if (cached) {
                 try {
                     announcements = JSON.parse(cached);
+                    console.log('>>> Loaded from cache:', announcements.length);
                 } catch(e) {
                     announcements = [];
                 }
             } else {
                 announcements = [];
+                console.log('>>> Empty announcements (no cache)');
             }
         }
 
         updateAnnBadge();
-
-        // Запускаем realtime sync для объявлений
         startAnnouncementsRealtimeSync();
+        console.log('>>> initAnnouncements DONE');
     }
 
     let unsubscribeAnnouncements = null;
@@ -5352,8 +5528,6 @@
     // === СТАРТ ===
     init();
     initAnnouncements();
-
-    init();
     </script>
 
     <!-- === LIGHTBOX === -->
@@ -5451,5 +5625,57 @@
 
     <!-- Toast уведомление -->
     <div id="annToast" class="ann-toast"></div>
+
+
+    <!-- === МОДАЛЬНОЕ ОКНО: ДОБАВЛЕНИЕ/РЕДАКТИРОВАНИЕ ПОСТАВЩИКА === -->
+    <div id="supplierModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="supplierModalTitle">Новый поставщик</div>
+                <button class="modal-close" onclick="closeSupplierModal()">✕</button>
+            </div>
+            <form id="supplierForm" onsubmit="saveSupplier(event)">
+                <input type="hidden" id="supplierEditId">
+                <div class="form-group">
+                    <label class="form-label">Название</label>
+                    <input type="text" class="form-input" id="supplierFormName" required placeholder="Название поставщика">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Категория</label>
+                    <select class="form-select" id="supplierFormCategory" required>
+                        <option value="хлеб">Хлеб</option>
+                        <option value="молочка">Молочка</option>
+                        <option value="уголь">Уголь/Газ</option>
+                        <option value="лаваш">Лаваш</option>
+                        <option value="мясо">Мясо/Десерты</option>
+                        <option value="фри">Фри/Заморозка</option>
+                        <option value="овощи">Овощи</option>
+                        <option value="курица">Курица</option>
+                        <option value="рыба">Рыба</option>
+                    </select>
+                </div>
+                <div style="display:flex;gap:12px;">
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Телефон</label>
+                        <input type="text" class="form-input" id="supplierFormPhone" required placeholder="8-900-000-00-00">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Код (опционально)</label>
+                        <input type="text" class="form-input" id="supplierFormCode" placeholder="0000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ассортимент (через запятую)</label>
+                    <input type="text" class="form-input" id="supplierFormItems" required placeholder="Товар 1, Товар 2, Товар 3...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Условия поставки</label>
+                    <textarea class="form-textarea" id="supplierFormSchedule" placeholder="Заявки: пн-пт до 15:00. Привоз: на следующий день..."></textarea>
+                </div>
+                <button type="submit" class="btn-save">💾 Сохранить поставщика</button>
+            </form>
+        </div>
+    </div>
+
 </body>
 </html>
