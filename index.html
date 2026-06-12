@@ -4221,6 +4221,7 @@
 
     function doLogout() {
         stopRealtimeSync();
+        stopAnnouncementsRealtimeSync();
         SafeStorage.removeItem('cb_session');
         currentRole = null;
         currentUser = null;
@@ -4869,6 +4870,80 @@
     });
 
     
+
+    // === FIREBASE: ОБЪЯВЛЕНИЯ ===
+    async function loadAnnouncementsFromFirebase() {
+        if (!db) return false;
+        try {
+            var snapshot = await db.collection('announcements').orderBy('createdAt', 'desc').get();
+            var firebaseAnnouncements = [];
+            snapshot.forEach(function(docSnap) {
+                firebaseAnnouncements.push(Object.assign({ id: docSnap.id }, docSnap.data()));
+            });
+            if (firebaseAnnouncements.length > 0) {
+                announcements = firebaseAnnouncements;
+                SafeStorage.setItem('cb_announcements', JSON.stringify(announcements));
+                console.log('Announcements loaded from Firebase:', announcements.length);
+                return true;
+            }
+            return false;
+        } catch(e) {
+            console.error('Firebase announcements load error:', e);
+            return false;
+        }
+    }
+
+    async function saveAnnouncementToFirebase(ann) {
+        if (!db) return false;
+        try {
+            await db.collection('announcements').doc(ann.id).set(ann);
+            console.log('Announcement saved to Firebase:', ann.title);
+            return true;
+        } catch(e) {
+            console.error('Firebase announcement save error:', e);
+            return false;
+        }
+    }
+
+    async function deleteAnnouncementFromFirebase(id) {
+        if (!db) return false;
+        try {
+            await db.collection('announcements').doc(id).delete();
+            return true;
+        } catch(e) {
+            console.error('Firebase announcement delete error:', e);
+            return false;
+        }
+    }
+
+    async function updateAnnouncementReadInFirebase(id, readBy) {
+        if (!db) return false;
+        try {
+            await db.collection('announcements').doc(id).update({ readBy: readBy });
+            return true;
+        } catch(e) {
+            console.error('Firebase announcement update error:', e);
+            return false;
+        }
+    }
+
+    function subscribeToAnnouncements() {
+        if (!db) return;
+        return db.collection('announcements').orderBy('createdAt', 'desc').onSnapshot(function(snapshot) {
+            var updated = [];
+            snapshot.forEach(function(docSnap) {
+                updated.push(Object.assign({ id: docSnap.id }, docSnap.data()));
+            });
+            announcements = updated;
+            SafeStorage.setItem('cb_announcements', JSON.stringify(announcements));
+            renderAnnouncements();
+            updateAnnBadge();
+            console.log('Announcements realtime update:', updated.length);
+        }, function(err) {
+            console.log('Announcements realtime error:', err.message);
+        });
+    }
+
     // === ОБЪЯВЛЕНИЯ ===
     let announcements = [];
     let currentAnnFilter = 'all';
@@ -4877,31 +4952,84 @@
     // Демо-данные удалены — теперь пустой список по умолчанию
     // Объявления создаются только через интерфейс шефа/су-шефа
 
-    function initAnnouncements() {
+    async function initAnnouncements() {
         // Версионирование: если версия хранилища устарела — очищаем
-        const STORAGE_VERSION = 'v7.3.1';
+        const STORAGE_VERSION = 'v7.3.2';
         const savedVersion = SafeStorage.getItem('cb_ann_version');
 
         if (savedVersion !== STORAGE_VERSION) {
-            // Очищаем старые данные при обновлении
             SafeStorage.removeItem('cb_announcements');
             SafeStorage.setItem('cb_ann_version', STORAGE_VERSION);
             console.log('Announcements storage cleared (version update)');
         }
 
-        // Загружаем из localStorage
-        const saved = SafeStorage.getItem('cb_announcements');
-        if (saved) {
-            try { 
-                announcements = JSON.parse(saved); 
-            } catch(e) { 
-                announcements = []; 
+        // Сначала пробуем загрузить из Firebase
+        var loadedFromCloud = false;
+        if (db) {
+            try {
+                var snapshot = await db.collection('announcements').orderBy('createdAt', 'desc').get();
+                var firebaseAnnouncements = [];
+                snapshot.forEach(function(docSnap) {
+                    firebaseAnnouncements.push(Object.assign({ id: docSnap.id }, docSnap.data()));
+                });
+                if (firebaseAnnouncements.length > 0) {
+                    announcements = firebaseAnnouncements;
+                    SafeStorage.setItem('cb_announcements', JSON.stringify(announcements));
+                    loadedFromCloud = true;
+                    console.log('Announcements loaded from Firebase:', firebaseAnnouncements.length);
+                }
+            } catch(e) {
+                console.log('Firebase announcements load failed:', e.message);
             }
-        } else {
-            // Пустой список по умолчанию (без демо!)
-            announcements = [];
         }
+
+        // Если не загрузили из облака — используем кэш
+        if (!loadedFromCloud) {
+            var cached = SafeStorage.getItem('cb_announcements');
+            if (cached) {
+                try {
+                    announcements = JSON.parse(cached);
+                } catch(e) {
+                    announcements = [];
+                }
+            } else {
+                announcements = [];
+            }
+        }
+
         updateAnnBadge();
+
+        // Запускаем realtime sync для объявлений
+        startAnnouncementsRealtimeSync();
+    }
+
+    let unsubscribeAnnouncements = null;
+
+    function startAnnouncementsRealtimeSync() {
+        if (!db || unsubscribeAnnouncements) return;
+        console.log('Starting announcements realtime sync...');
+        unsubscribeAnnouncements = db.collection('announcements').orderBy('createdAt', 'desc').onSnapshot(function(snapshot) {
+            var updated = [];
+            snapshot.forEach(function(docSnap) {
+                updated.push(Object.assign({ id: docSnap.id }, docSnap.data()));
+            });
+            if (updated.length > 0 || announcements.length > 0) {
+                announcements = updated;
+                SafeStorage.setItem('cb_announcements', JSON.stringify(announcements));
+                renderAnnouncements();
+                updateAnnBadge();
+                console.log('Announcements realtime update:', updated.length);
+            }
+        }, function(err) {
+            console.log('Announcements realtime error:', err.message);
+        });
+    }
+
+    function stopAnnouncementsRealtimeSync() {
+        if (unsubscribeAnnouncements) {
+            unsubscribeAnnouncements();
+            unsubscribeAnnouncements = null;
+        }
     }
 
     function openAnnouncements() {
@@ -5072,15 +5200,19 @@
         updateAnnBadge();
     }
 
-    function markAnnRead() {
+    async function markAnnRead() {
         if (!selectedAnnouncement) return;
         selectedAnnouncement.readBy[currentRole] = new Date().toISOString();
         persistAnnouncements();
+
+        // Обновляем в Firebase
+        await updateAnnouncementReadInFirebase(selectedAnnouncement.id, selectedAnnouncement.readBy);
+
         closeAnnView();
         showAnnToast('✓ Отмечено как прочитанное');
     }
 
-    function deleteAnnouncement() {
+    async function deleteAnnouncement() {
         if (!selectedAnnouncement) return;
 
         // Проверка прав: удалять может только шеф или автор объявления
@@ -5093,8 +5225,14 @@
         }
 
         if (!confirm('Удалить это объявление?')) return;
-        announcements = announcements.filter(a => a.id !== selectedAnnouncement.id);
+
+        const annId = selectedAnnouncement.id;
+        announcements = announcements.filter(a => a.id !== annId);
         persistAnnouncements();
+
+        // Удаляем из Firebase
+        await deleteAnnouncementFromFirebase(annId);
+
         closeAnnView();
         showAnnToast('🗑 Объявление удалено');
     }
@@ -5128,7 +5266,7 @@
         document.getElementById('annRoleAll').checked = false;
     }
 
-    function saveAnnouncement() {
+    async function saveAnnouncement() {
         const title = document.getElementById('annFormTitle').value.trim();
         const text = document.getElementById('annFormText').value.trim();
         const priority = document.getElementById('annFormPriority').value;
@@ -5159,8 +5297,12 @@
             readBy: { [currentRole]: new Date().toISOString() }
         };
 
-        announcements.push(newAnn);
+        announcements.unshift(newAnn); // Новые сверху
         persistAnnouncements();
+
+        // Сохраняем в Firebase
+        await saveAnnouncementToFirebase(newAnn);
+
         closeAnnCreate();
         renderAnnouncements();
         updateAnnBadge();
