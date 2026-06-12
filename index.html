@@ -664,6 +664,7 @@
                     <div class="logo" style="font-size:18px;margin-bottom:2px;">ПОСТАВЩИКИ</div>
                     <div class="subtitle" style="font-size:10px;"><span id="suppliersAccessBadge">Контакты и заявки</span></div>
                 </div>
+                <button onclick="syncSuppliersToFirebase()" style="background:var(--accent-primary);border:none;border-radius:10px;padding:8px 12px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;" title="Синхронизировать с облаком">☁️</button>
                 <button onclick="closeSuppliers()" style="background:var(--bg-card);border:2px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text-primary);font-size:13px;cursor:pointer;white-space:nowrap;">✕</button>
             </div>
         </div>
@@ -4238,6 +4239,7 @@
     function doLogout() {
         stopRealtimeSync();
         stopAnnouncementsRealtimeSync();
+        stopSuppliersRealtimeSync();
         SafeStorage.removeItem('cb_session');
         currentRole = null;
         currentUser = null;
@@ -4304,6 +4306,7 @@
 
         // Запускаем realtime sync для получения изменений от других
         startRealtimeSync();
+        startSuppliersRealtimeSync();
 
         // Инициализируем объявления (после логина, когда currentRole известен)
         initAnnouncements();
@@ -4887,6 +4890,27 @@
         }
     }
 
+    async function syncSuppliersToFirebase() {
+        var btn = event.target;
+        var originalText = btn.textContent;
+        btn.textContent = '⏳';
+        btn.disabled = true;
+        try {
+            // Push current suppliers to Firebase
+            var ok = await saveSuppliersToFirebase();
+            if (ok) {
+                showAnnToast('☁️ Поставщики синхронизированы');
+            } else {
+                showAnnToast('⚠️ Ошибка синхронизации');
+            }
+        } catch(e) {
+            showAnnToast('⚠️ Ошибка: ' + e.message);
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+
     async function loadSuppliersFromFirebase() {
         if (!db) return false;
         try {
@@ -4988,6 +5012,39 @@
         if (unsubscribeDishes) {
             unsubscribeDishes();
             unsubscribeDishes = null;
+        }
+    }
+
+    // === REALTIME SYNC ПОСТАВЩИКОВ ===
+    let unsubscribeSuppliers = null;
+
+    function startSuppliersRealtimeSync() {
+        if (!db || unsubscribeSuppliers) return;
+        console.log('Starting suppliers realtime sync...');
+        unsubscribeSuppliers = db.collection('suppliers').doc('main').onSnapshot(function(doc) {
+            if (doc.exists) {
+                var data = doc.data();
+                if (data.data && Array.isArray(data.data)) {
+                    SUPPLIERS.length = 0;
+                    data.data.forEach(s => SUPPLIERS.push(s));
+                    persistSuppliers();
+                    // Re-render only if suppliers screen is visible
+                    var ss = document.getElementById('suppliersScreen');
+                    if (ss && ss.style.display === 'block') {
+                        renderSuppliers();
+                    }
+                    console.log('Suppliers realtime update:', SUPPLIERS.length);
+                }
+            }
+        }, function(err) {
+            console.log('Suppliers realtime error:', err.message);
+        });
+    }
+
+    function stopSuppliersRealtimeSync() {
+        if (unsubscribeSuppliers) {
+            unsubscribeSuppliers();
+            unsubscribeSuppliers = null;
         }
     }
 
