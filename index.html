@@ -5028,11 +5028,7 @@
                     SUPPLIERS.length = 0;
                     data.data.forEach(s => SUPPLIERS.push(s));
                     persistSuppliers();
-                    // Re-render only if suppliers screen is visible
-                    var ss = document.getElementById('suppliersScreen');
-                    if (ss && ss.style.display === 'block') {
-                        renderSuppliers();
-                    }
+                    renderSuppliers();
                     console.log('Suppliers realtime update:', SUPPLIERS.length);
                 }
             }
