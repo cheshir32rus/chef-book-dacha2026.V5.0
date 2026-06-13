@@ -664,7 +664,7 @@
                     <div class="logo" style="font-size:18px;margin-bottom:2px;">ПОСТАВЩИКИ</div>
                     <div class="subtitle" style="font-size:10px;"><span id="suppliersAccessBadge">Контакты и заявки</span></div>
                 </div>
-                <button onclick="syncSuppliersToFirebase()" style="background:var(--accent-primary);border:none;border-radius:10px;padding:8px 12px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;" title="Синхронизировать с облаком">☁️</button>
+                <button onclick="syncSuppliersToFirebase()" style="background:var(--accent-primary);border:none;border-radius:10px;padding:8px 12px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;" title="Синхронизировать с облаком">☁️ Синхр.</button>
                 <button onclick="closeSuppliers()" style="background:var(--bg-card);border:2px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text-primary);font-size:13px;cursor:pointer;white-space:nowrap;">✕</button>
             </div>
         </div>
@@ -4879,32 +4879,33 @@
     }
 
     async function saveSuppliersToFirebase() {
-        if (!db) return false;
+        if (!db) {
+            console.error('Firebase not initialized (db is null)');
+            throw new Error('Firebase не подключен');
+        }
         try {
             await db.collection('suppliers').doc('main').set({ data: SUPPLIERS, updatedAt: new Date().toISOString() });
             console.log('Suppliers saved to Firebase');
             return true;
         } catch(e) {
-            console.error('Firebase suppliers save error:', e);
-            return false;
+            console.error('Firebase suppliers save error:', e.message, e.code);
+            throw e;
         }
     }
 
     async function syncSuppliersToFirebase() {
-        var btn = event.target;
-        var originalText = btn.textContent;
+        var btn = event.currentTarget || event.target;
+        var originalText = btn.textContent || '☁️';
         btn.textContent = '⏳';
         btn.disabled = true;
         try {
-            // Push current suppliers to Firebase
             var ok = await saveSuppliersToFirebase();
             if (ok) {
                 showAnnToast('☁️ Поставщики синхронизированы');
-            } else {
-                showAnnToast('⚠️ Ошибка синхронизации');
             }
         } catch(e) {
-            showAnnToast('⚠️ Ошибка: ' + e.message);
+            console.error('Sync error:', e);
+            showAnnToast('⚠️ ' + (e.message || 'Ошибка синхронизации'));
         } finally {
             btn.textContent = originalText;
             btn.disabled = false;
