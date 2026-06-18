@@ -4841,7 +4841,7 @@
         const items = itemsText.split(',').map(i => i.trim()).filter(i => i);
 
         const supplierData = {
-            name, category, phone, code: code || undefined,
+            name, category, phone, code: code || "",
             items, schedule,
             updated_at: new Date().toISOString(),
             updated_by: currentRole
@@ -4884,7 +4884,29 @@
             throw new Error('Firebase не подключен');
         }
         try {
-            await db.collection('suppliers').doc('main').set({ data: SUPPLIERS, updatedAt: new Date().toISOString() });
+            // === ФИКС: глубокая очистка undefined перед отправкой в Firebase ===
+            function cleanUndefined(obj) {
+                if (Array.isArray(obj)) {
+                    return obj.map(cleanUndefined).filter(v => v !== undefined);
+                }
+                if (obj && typeof obj === 'object') {
+                    const cleaned = {};
+                    for (const [key, value] of Object.entries(obj)) {
+                        if (value !== undefined) {
+                            cleaned[key] = cleanUndefined(value);
+                        }
+                    }
+                    return cleaned;
+                }
+                return obj;
+            }
+
+            const cleanData = cleanUndefined(SUPPLIERS);
+
+            await db.collection('suppliers').doc('main').set({ 
+                data: cleanData, 
+                updatedAt: new Date().toISOString() 
+            });
             console.log('Suppliers saved to Firebase');
             return true;
         } catch(e) {
